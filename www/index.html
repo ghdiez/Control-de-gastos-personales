@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mis Gastos</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="assets/icon.png">
+    <meta name="theme-color" content="#1d4ed8">
+
+    <script src="assets/tailwind.js"></script>
+    <script src="assets/fontawesome.js"></script>
+    <script src="assets/chart.js"></script>
+    <script src="assets/sweetalert2.js"></script>
+
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f3f4f6; padding-bottom: 90px; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .hidden-section { display: none !important; }
+        .active-nav { color: #2563eb; }
+        .inactive-nav { color: #9ca3af; }
+        .fade-in { animation: fadeIn 0.2s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .checkbox-std { width: 18px; height: 18px; accent-color: #2563eb; cursor: pointer; }
+        .alert-card:active { transform: scale(0.98); transition: transform 0.1s; }
+        
+        /* Estilo para Acordeón de Ayuda */
+        details > summary { list-style: none; cursor: pointer; }
+        details > summary::-webkit-details-marker { display: none; }
+        details[open] summary ~ * { animation: sweep .3s ease-in-out; }
+        @keyframes sweep { 0% {opacity: 0; margin-top: -10px} 100% {opacity: 1; margin-top: 0px} }
+    </style>
+</head>
+<body>
+
+    <header class="bg-blue-700 text-white p-4 shadow-lg fixed top-0 w-full z-40 flex justify-between items-center">
+        <h1 class="text-lg font-bold"><i class="fas fa-wallet mr-2"></i>Mis Gastos</h1>
+        <div class="flex gap-2">
+            <button onclick="App.nav('help')" class="text-xs bg-blue-800 hover:bg-blue-600 p-2 rounded transition border border-blue-500">
+                <i class="fas fa-info-circle"></i>
+            </button>
+            <button onclick="BackupManager.exportJSON()" class="text-xs bg-blue-800 hover:bg-blue-600 p-2 rounded transition border border-blue-500">
+                <i class="fas fa-save mr-1"></i> Backup
+            </button>
+        </div>
+    </header>
+    <div class="h-16"></div>
+
+    <section id="view-dashboard" class="p-4 fade-in">
+        <div class="bg-white rounded-xl shadow-md p-5 mb-4 relative overflow-hidden">
+            <div class="absolute top-0 right-0 bg-blue-100 w-16 h-16 rounded-bl-full -mr-8 -mt-8"></div>
+            <h2 class="text-gray-500 text-xs font-bold uppercase tracking-wider">Gasto Total (Mes Actual)</h2>
+            <p class="text-4xl font-bold text-gray-800 mt-2" id="dash-total">$ 0</p>
+            <p class="text-xs text-gray-400 mt-1" id="dash-count">0 transacciones</p>
+        </div>
+
+        <div id="dash-alerts-container" class="mb-4 hidden-section">
+            <h3 class="text-gray-700 font-bold mb-2 text-sm"><i class="fas fa-exclamation-circle text-red-500"></i> Atención Requerida</h3>
+            <p class="text-[10px] text-gray-400 mb-2 italic">Toca una alerta para registrar el pago.</p>
+            <div id="alerts-list" class="space-y-2"></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <div onclick="App.nav('reportes')" class="bg-white p-4 rounded-lg shadow text-center active:bg-gray-50 cursor-pointer">
+                <i class="fas fa-chart-column text-purple-500 text-2xl mb-2"></i>
+                <p class="text-xs font-bold text-gray-600">Reportes Avanzados</p>
+            </div>
+            <div onclick="App.nav('config')" class="bg-white p-4 rounded-lg shadow text-center active:bg-gray-50 cursor-pointer">
+                <i class="fas fa-cogs text-gray-500 text-2xl mb-2"></i>
+                <p class="text-xs font-bold text-gray-600">Configurar</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="view-add" class="p-4 hidden-section fade-in">
+        <div class="bg-white rounded-xl shadow-lg p-5">
+            <div class="flex justify-between items-center border-b pb-2 mb-4">
+                <h2 class="text-lg font-bold text-gray-800" id="form-title">Registrar Movimiento</h2>
+                <button type="button" onclick="App.discardForm()" class="text-xs text-gray-500 underline">Descartar / Volver</button>
+            </div>
+            
+            <form id="form-add">
+                <input type="hidden" id="inp-edit-id">
+                <div class="mb-3">
+                    <label class="label-std">Fecha</label>
+                    <input type="date" id="inp-date" class="input-std">
+                </div>
+                <div class="mb-3">
+                    <label class="label-std">Categoría</label>
+                    <select id="inp-cat" class="input-std" onchange="UI.updateGroupsAndServices()">
+                        <option value="">Seleccione...</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="label-std">Grupo / Subcategoría</label>
+                    <select id="inp-group" class="input-std" onchange="UI.onGroupChange()">
+                        <option value="">---</option>
+                    </select>
+                </div>
+                
+                <div id="box-recurring-select" class="mb-3 hidden-section bg-yellow-50 p-2 rounded border border-yellow-200">
+                    <label class="label-std text-yellow-800 text-xs"><i class="fas fa-bolt"></i> Vinculado a Servicio:</label>
+                    <select id="inp-service-link" class="input-std bg-white text-sm" onchange="UI.autofillService()">
+                        <option value="">(Ninguno)</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="label-std">Descripción</label>
+                    <input type="text" id="inp-desc" placeholder="Detalle del gasto" class="input-std">
+                </div>
+                <div class="flex justify-between items-center mb-3 bg-gray-50 p-2 rounded">
+                    <span class="text-xs font-bold text-gray-600">Modo Detallado (Cant * Unit)</span>
+                    <input type="checkbox" id="toggle-detailed" class="w-5 h-5 text-blue-600" onchange="UI.toggleDetailedMode()">
+                </div>
+                <div id="detailed-inputs" class="flex gap-2 mb-3 hidden-section">
+                    <div class="w-1/3">
+                        <label class="label-std">Cant.</label>
+                        <input type="number" id="inp-qty" value="1" class="input-std text-center" oninput="UI.calcTotal()">
+                    </div>
+                    <div class="w-2/3">
+                        <label class="label-std">Valor Unitario</label>
+                        <input type="number" id="inp-unit" class="input-std" placeholder="0" oninput="UI.calcTotal()">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="label-std text-blue-800">Total a Pagar</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2 text-gray-500 font-bold">$</span>
+                        <input type="number" id="inp-total" class="w-full border-2 border-blue-500 rounded p-2 pl-8 text-xl font-bold text-gray-800 outline-none" placeholder="0">
+                    </div>
+                </div>
+                <button type="button" id="btn-save-tx" onclick="App.saveTransaction()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-lg hover:bg-blue-700 transition">Guardar</button>
+            </form>
+        </div>
+    </section>
+
+    <section id="view-history" class="p-4 hidden-section fade-in">
+        <div class="flex justify-between items-center mb-3">
+            <h2 class="text-lg font-bold text-gray-800">Historial <span id="history-counter" class="text-gray-400 text-sm font-normal ml-1"></span></h2>
+            <div id="actions-history" class="hidden-section flex gap-2">
+                 <button onclick="BackupManager.exportSelected()" class="bg-green-600 text-white text-xs px-3 py-1 rounded font-bold shadow"><i class="fas fa-file-csv"></i> Exportar</button>
+                 <button onclick="App.deleteSelected()" class="bg-red-500 text-white text-xs px-3 py-1 rounded font-bold shadow"><i class="fas fa-trash"></i> Borrar</button>
+            </div>
+        </div>
+        <input type="text" id="search-history" onkeyup="UI.renderHistory()" placeholder="Buscar..." class="w-full bg-white border rounded-full py-2 px-4 mb-3 shadow-sm text-sm">
+        <div class="flex justify-between items-center bg-gray-200 p-2 rounded mb-2 text-xs text-gray-600 font-bold">
+            <div class="w-8 text-center"><input type="checkbox" id="chk-all" class="checkbox-std" onchange="App.toggleSelectAll(this)"></div>
+            <div onclick="App.setSort('date')" class="cursor-pointer flex-1">Fecha <i id="sort-icon-date" class="fas fa-sort ml-1"></i></div>
+            <div onclick="App.setSort('category')" class="cursor-pointer flex-1">Categ. <i id="sort-icon-category" class="fas fa-sort ml-1"></i></div>
+            <div onclick="App.setSort('group')" class="cursor-pointer flex-1">Grupo <i id="sort-icon-group" class="fas fa-sort ml-1"></i></div>
+        </div>
+        <div id="history-list" class="space-y-2 pb-20"></div>
+    </section>
+
+    <section id="view-reportes" class="p-4 hidden-section fade-in">
+        <h2 class="text-lg font-bold text-gray-800 mb-4">Reportes Inteligentes</h2>
+        <div class="bg-white rounded-lg shadow p-3 mb-4">
+            <div class="grid grid-cols-2 gap-2 mb-3">
+                <div><label class="text-[10px] font-bold text-gray-500 uppercase">Desde</label><input type="date" id="rpt-start" class="w-full border rounded p-1 text-xs" onchange="UI.renderReports()"></div>
+                <div><label class="text-[10px] font-bold text-gray-500 uppercase">Hasta</label><input type="date" id="rpt-end" class="w-full border rounded p-1 text-xs" onchange="UI.renderReports()"></div>
+            </div>
+            <div class="flex justify-between gap-1 mb-3">
+                <button onclick="App.setReportRange(1)" class="flex-1 bg-blue-50 text-blue-700 text-[10px] font-bold py-1 rounded border hover:bg-blue-100">Este Mes</button>
+                <button onclick="App.setReportRange(3)" class="flex-1 bg-gray-50 text-gray-600 text-[10px] font-bold py-1 rounded border hover:bg-gray-100">3 Meses</button>
+                <button onclick="App.setReportRange(12)" class="flex-1 bg-gray-50 text-gray-600 text-[10px] font-bold py-1 rounded border hover:bg-gray-100">Este Año</button>
+            </div>
+            <div>
+                <label class="text-[10px] font-bold text-gray-500 uppercase">Gráfico</label>
+                <select id="rpt-type" class="w-full border rounded p-1 text-xs bg-gray-50" onchange="UI.renderReports()">
+                    <option value="bar">Barras (Total Mensual)</option>
+                    <option value="grouped">Barras Agrupadas (Comparativo)</option>
+                    <option value="stacked">Barras Apiladas</option>
+                    <option value="line">Línea Tendencia</option>
+                    <option value="doughnut">Torta (Total)</option>
+                </select>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-2 mb-4 h-72"><canvas id="chart-main"></canvas></div>
+        <div class="bg-white rounded-lg shadow p-3 mb-6">
+            <div class="flex justify-between items-center"><span class="text-xs text-gray-500">Total Periodo:</span><span class="text-lg font-bold text-blue-700" id="rpt-total-sum">$ 0</span></div>
+            <div class="flex justify-between items-center mt-1"><span class="text-xs text-gray-500">Promedio Mensual:</span><span class="text-sm font-bold text-gray-700" id="rpt-avg">$ 0</span></div>
+        </div>
+    </section>
+
+    <section id="view-config" class="p-4 hidden-section fade-in">
+        <h2 class="text-lg font-bold text-gray-800 mb-4">Configuración</h2>
+        
+        <div class="bg-white rounded-lg shadow mb-4">
+            <div onclick="UI.toggleConfigSection('cfg-cats')" class="p-4 border-b flex justify-between items-center cursor-pointer">
+                <span class="font-bold text-sm"><i class="fas fa-tags text-purple-500 mr-2"></i> Categorías y Grupos</span><i class="fas fa-chevron-down"></i>
+            </div>
+            <div id="cfg-cats" class="hidden-section p-4 bg-gray-50">
+                <div id="list-cats-cfg" class="space-y-2 mb-3"></div>
+                <button onclick="App.CategoryManager.create()" class="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded font-bold w-full mt-2">+ Nueva Categoría</button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow mb-4">
+            <div onclick="UI.toggleConfigSection('cfg-services')" class="p-4 border-b flex justify-between items-center cursor-pointer">
+                <span class="font-bold text-sm"><i class="fas fa-bolt text-yellow-500 mr-2"></i> Servicios Recurrentes</span><i class="fas fa-chevron-down"></i>
+            </div>
+            <div id="cfg-services" class="hidden-section p-4 bg-gray-50">
+                <div id="list-services-cfg" class="space-y-2 mb-3"></div>
+                <button onclick="App.addServicePrompt()" class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded font-bold w-full mb-2">+ Nuevo Servicio</button>
+                <div class="border-t pt-2 mt-2">
+                    <button onclick="App.Maintenance.linkHistory()" class="text-xs bg-gray-200 text-gray-700 px-3 py-2 rounded font-bold w-full"><i class="fas fa-magic"></i> Vincular Historial Automáticamente</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-4 mb-6">
+             <span class="font-bold text-sm block mb-3 text-gray-700"><i class="fas fa-file-import text-blue-500 mr-2"></i> Importación de Datos</span>
+             <div class="grid grid-cols-2 gap-3">
+                 <label class="block w-full bg-gray-50 border border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-yellow-50 transition">
+                     <i class="fas fa-folder-open text-yellow-500 text-2xl mb-1"></i>
+                     <span class="block text-xs font-bold text-gray-600">Copia Seguridad (JSON)</span>
+                     <input type="file" class="hidden" accept=".json" onchange="BackupManager.importJSON(this)">
+                 </label>
+                 <label class="block w-full bg-gray-50 border border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-green-50 transition">
+                     <i class="fas fa-file-csv text-green-600 text-2xl mb-1"></i>
+                     <span class="block text-xs font-bold text-gray-600">Datos Históricos (CSV)</span>
+                     <input type="file" class="hidden" accept=".csv" onchange="BackupManager.importCSV(this)">
+                 </label>
+             </div>
+        </div>
+        
+        <div class="text-center mt-10 pb-10">
+            <button onclick="App.factoryReset()" class="border border-red-300 text-red-400 hover:bg-red-50 hover:text-red-600 font-bold text-xs py-2 px-4 rounded transition">Restablecer Datos de Fábrica</button>
+        </div>
+    </section>
+
+    <section id="view-help" class="p-4 hidden-section fade-in bg-white min-h-screen fixed top-0 left-0 w-full z-50 overflow-y-auto">
+        <div class="flex justify-between items-center mb-6 border-b pb-4 sticky top-0 bg-white z-10">
+            <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-question-circle text-blue-600 mr-2"></i> Guía de Uso</h2>
+            <button onclick="App.nav('dashboard')" class="text-gray-500 hover:text-gray-800"><i class="fas fa-times text-xl"></i></button>
+        </div>
+        
+        <div class="space-y-4 pb-20">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                <h3 class="font-bold text-blue-800 text-sm mb-2">Bienvenido a Mis Gastos</h3>
+                <p class="text-xs text-blue-700">Esta aplicación permite llevar el control detallado de tus finanzas personales, funcionando 100% offline.</p>
+            </div>
+
+            <details class="group bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                <summary class="flex justify-between items-center p-3 cursor-pointer bg-gray-50 hover:bg-gray-100 font-bold text-gray-700 text-sm">
+                    <span><i class="fas fa-plus-circle text-green-500 mr-2"></i> Registro de Gastos</span>
+                    <i class="fas fa-chevron-down text-gray-400 group-open:rotate-180 transition"></i>
+                </summary>
+                <div class="p-3 text-xs text-gray-600 leading-relaxed border-t">
+                    <p>Usa el botón central (+) para agregar movimientos.</p>
+                    <ul class="list-disc list-inside mt-2 space-y-1">
+                        <li>Si seleccionas un Grupo vinculado a un servicio, la app lo detectará automáticamente.</li>
+                        <li>Usa el <b>Modo Detallado</b> para especificar cantidad y precio unitario.</li>
+                        <li>Edita o borra registros desde el Historial usando los iconos correspondientes.</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details class="group bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                <summary class="flex justify-between items-center p-3 cursor-pointer bg-gray-50 hover:bg-gray-100 font-bold text-gray-700 text-sm">
+                    <span><i class="fas fa-bolt text-yellow-500 mr-2"></i> Alertas y Servicios</span>
+                    <i class="fas fa-chevron-down text-gray-400 group-open:rotate-180 transition"></i>
+                </summary>
+                <div class="p-3 text-xs text-gray-600 leading-relaxed border-t">
+                    <p class="mb-2">Configura tus pagos recurrentes en <b>Configuración > Servicios</b>.</p>
+                    <p><b>Frecuencias disponibles:</b></p>
+                    <ul class="list-disc list-inside mt-1 mb-2 space-y-1">
+                        <li><b>Mensual:</b> Alerta todos los meses.</li>
+                        <li><b>Bimestral (Impar):</b> Ene, Mar, May, Jul...</li>
+                        <li><b>Bimestral (Par):</b> Feb, Abr, Jun, Ago...</li>
+                    </ul>
+                    <p>Toca la tarjeta de alerta en el Inicio para registrar el pago rápidamente.</p>
+                </div>
+            </details>
+
+            <details class="group bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                <summary class="flex justify-between items-center p-3 cursor-pointer bg-gray-50 hover:bg-gray-100 font-bold text-gray-700 text-sm">
+                    <span><i class="fas fa-database text-blue-500 mr-2"></i> Respaldo de Datos</span>
+                    <i class="fas fa-chevron-down text-gray-400 group-open:rotate-180 transition"></i>
+                </summary>
+                <div class="p-3 text-xs text-gray-600 leading-relaxed border-t">
+                    <p class="mb-2">Tus datos son privados y viven en este dispositivo.</p>
+                    <ul class="list-disc list-inside space-y-1">
+                        <li><b>Backup JSON:</b> Guarda una copia completa de seguridad.</li>
+                        <li><b>Importar CSV:</b> Carga datos históricos desde Excel.</li>
+                        <li><b>Exportar:</b> Envía reportes en formato CSV a otras aplicaciones.</li>
+                    </ul>
+                </div>
+            </details>
+
+            <div class="text-center mt-8 border-t pt-4">
+                <p class="font-bold text-gray-800 text-sm">Mis Gastos App</p>
+                <p class="text-xs text-gray-400">Versión 1.0.0</p>
+                <p class="text-[10px] text-gray-400 mt-2">© GabHoX - ghdiez@gmail.com - 2025 - Todos los derechos reservados</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="view-cat-editor" class="p-4 hidden-section bg-white min-h-screen fixed top-0 left-0 w-full z-50 overflow-y-auto">
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <h2 class="text-xl font-bold text-gray-800">Editar Categoría</h2>
+            <button onclick="App.nav('config')" class="text-gray-500"><i class="fas fa-times text-xl"></i></button>
+        </div>
+        <form onsubmit="event.preventDefault(); App.CategoryManager.save();">
+            <input type="hidden" id="edit-cat-id">
+            <div class="mb-4"><label class="label-std">Nombre</label><input type="text" id="edit-cat-name" class="input-std font-bold text-lg" required></div>
+            <div class="mb-4"><label class="label-std mb-2">Grupos</label><div id="edit-cat-groups-list" class="space-y-2 mb-3"></div><button type="button" onclick="UI.CategoryEditor.addGroupInput('')" class="text-sm text-blue-600 font-bold">+ Grupo</button></div>
+            <div class="fixed bottom-0 left-0 w-full p-4 bg-white border-t flex gap-3"><button type="button" onclick="App.nav('config')" class="flex-1 bg-gray-200 font-bold py-3 rounded-lg">Cancelar</button><button type="submit" class="flex-1 bg-purple-600 text-white font-bold py-3 rounded-lg">Guardar</button></div>
+        </form>
+        <div class="h-20"></div>
+    </section>
+
+    <nav class="fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around py-2 pb-6 z-40 shadow-inner">
+        <button onclick="App.nav('dashboard')" class="nav-btn active-nav flex flex-col items-center w-full" id="btn-dashboard"><i class="fas fa-home text-xl mb-1"></i><span class="text-[10px]">Inicio</span></button>
+        <button onclick="App.nav('add')" class="nav-btn inactive-nav flex flex-col items-center w-full" id="btn-add">
+            <div class="bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center -mt-6 shadow-lg border-4 border-gray-100"><i class="fas fa-plus text-xl"></i></div>
+        </button>
+        <button onclick="App.nav('history')" class="nav-btn inactive-nav flex flex-col items-center w-full" id="btn-history"><i class="fas fa-list text-xl mb-1"></i><span class="text-[10px]">Historial</span></button>
+    </nav>
+
+    <script>
+        const styleInputs = document.createElement('style');
+        styleInputs.innerHTML = `.label-std{display:block;color:#4b5563;font-size:0.875rem;font-weight:700;margin-bottom:0.25rem}.input-std{width:100%;background-color:#f9fafb;border:1px solid #d1d5db;border-radius:0.375rem;padding:0.5rem;outline:none}.input-std:focus{border-color:#3b82f6;ring:2px;ring-color:#93c5fd}`; document.head.appendChild(styleInputs);
+
+        const DEFAULT_DATA = {
+            transactions: [],
+            categories: [
+                { id: 'cat_vivienda', name: 'Vivienda', groups: ['Arriendo', 'Reparaciones', 'Muebles', 'Impuesto', 'Limpieza', 'Otro'] }, 
+                { id: 'cat_servicios', name: 'Servicios', groups: ['Agua', 'Luz', 'Gas', 'Internet', 'Celular', 'Administración', 'Suscripciones'] }, 
+                { id: 'cat_alimentos', name: 'Alimentos', groups: ['Mercado', 'Restaurante'] },
+                { id: 'cat_transporte', name: 'Transporte', groups: ['Bus', 'Taxi', 'Gasolina'] }
+            ],
+            recurringServices: []
+        };
+
+        const FREQ_LABELS = { 'MONTHLY': 'Mensual', 'BIMONTHLY_ODD': 'Bimestral (Impar)', 'BIMONTHLY_EVEN': 'Bimestral (Par)' };
+
+        let store = { ...DEFAULT_DATA };
+        let state = { editTxId: null, historySort: { key: 'date', dir: 'desc' }, selectedTx: new Set(), reportChart: null, filteredCount: 0 };
+
+        const App = {
+            init: () => {
+                const saved = localStorage.getItem('gastosApp_data');
+                if (saved) store = JSON.parse(saved);
+                App.setReportRange(1);
+                document.getElementById('inp-date').value = new Date().toLocaleDateString('en-CA');
+                UI.renderCategoriesSelect(); UI.renderServicesConfig(); UI.renderCategoriesConfig();
+                App.nav('dashboard');
+            },
+
+            save: () => { localStorage.setItem('gastosApp_data', JSON.stringify(store)); App.refreshAll(); },
+            refreshAll: () => { UI.updateDashboard(); UI.renderHistory(); UI.renderCategoriesSelect(); UI.renderCategoriesConfig(); UI.renderServicesConfig(); },
+
+            factoryReset: () => {
+                Swal.fire({ title: '¿Restablecer todo?', text: "Se borrarán todos los datos. Irreversible.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sí, borrar todo' }).then((r) => { if (r.isConfirmed) { localStorage.clear(); location.reload(); } });
+            },
+
+            nav: (viewName) => {
+                if (viewName === 'add' && !state.editTxId) App.resetForm();
+                document.querySelectorAll('section').forEach(el => el.classList.add('hidden-section'));
+                document.getElementById(`view-${viewName}`).classList.remove('hidden-section');
+                
+                if (viewName !== 'cat-editor' && viewName !== 'help') {
+                    document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('active-nav'); b.classList.add('inactive-nav'); });
+                    const btn = document.getElementById(`btn-${viewName}`);
+                    if (btn) { btn.classList.remove('inactive-nav'); btn.classList.add('active-nav'); }
+                }
+                if (viewName === 'dashboard') UI.updateDashboard();
+                if (viewName === 'history') UI.renderHistory();
+                if (viewName === 'reportes') UI.renderReports();
+            },
+
+            resetForm: () => {
+                state.editTxId = null; document.getElementById('form-add').reset();
+                document.getElementById('inp-date').value = new Date().toLocaleDateString('en-CA');
+                document.getElementById('inp-edit-id').value = "";
+                document.getElementById('form-title').innerText = "Registrar Movimiento";
+                document.getElementById('btn-save-tx').innerText = "Guardar";
+                document.getElementById('btn-save-tx').classList.replace('bg-orange-500', 'bg-blue-600');
+                UI.updateGroupsAndServices(); UI.toggleDetailedMode();
+            },
+            discardForm: () => { App.resetForm(); App.nav('dashboard'); },
+
+            payFromAlert: (serviceId) => {
+                const srv = store.recurringServices.find(s => s.id === serviceId);
+                if (!srv) return;
+                App.nav('add');
+                document.getElementById('inp-date').value = new Date().toLocaleDateString('en-CA');
+                const parentCat = store.categories.find(c => c.groups.includes(srv.name));
+                if (parentCat) {
+                    document.getElementById('inp-cat').value = parentCat.id;
+                    UI.updateGroupsAndServices(); 
+                    document.getElementById('inp-group').value = srv.name; 
+                } else { Swal.fire('Aviso', `Categoría para "${srv.name}" no encontrada. Selecciónala manual.`, 'warning'); }
+                document.getElementById('inp-service-link').value = srv.id;
+                UI.autofillService();
+                if (srv.type === 'VARIABLE') document.getElementById('inp-total').focus();
+            },
+
+            saveTransaction: () => {
+                const id = state.editTxId;
+                const date = document.getElementById('inp-date').value;
+                const catId = document.getElementById('inp-cat').value;
+                const catName = catId ? document.getElementById('inp-cat').options[document.getElementById('inp-cat').selectedIndex].text : '';
+                const total = parseFloat(document.getElementById('inp-total').value);
+
+                if (!date || isNaN(total) || !catId) return Swal.fire('Error', 'Faltan datos obligatorios', 'error');
+
+                const isDetailed = document.getElementById('toggle-detailed').checked;
+                const qty = isDetailed ? parseFloat(document.getElementById('inp-qty').value) : 1;
+                const unit = isDetailed ? parseFloat(document.getElementById('inp-unit').value) : total;
+
+                const txObj = {
+                    id: id || crypto.randomUUID(),
+                    date, categoryId: catId, category: catName,
+                    group: document.getElementById('inp-group').value,
+                    description: document.getElementById('inp-desc').value || 'Sin descripción',
+                    quantity: qty, unitValue: unit, total,
+                    serviceId: document.getElementById('inp-service-link').value || null
+                };
+
+                if (id) { const idx = store.transactions.findIndex(t => t.id === id); if (idx !== -1) store.transactions[idx] = txObj; }
+                else { store.transactions.unshift(txObj); }
+                App.save(); App.discardForm();
+                Swal.fire({ title: 'Guardado', icon: 'success', timer: 1000, showConfirmButton: false });
+            },
+
+            editTransaction: (id) => {
+                const tx = store.transactions.find(t => t.id === id); if (!tx) return;
+                state.editTxId = id;
+                document.getElementById('inp-edit-id').value = id;
+                document.getElementById('inp-date').value = tx.date;
+                document.getElementById('inp-cat').value = tx.categoryId;
+                UI.updateGroupsAndServices();
+                document.getElementById('inp-group').value = tx.group;
+                document.getElementById('inp-service-link').value = tx.serviceId || "";
+                document.getElementById('inp-desc').value = tx.description;
+                document.getElementById('toggle-detailed').checked = (tx.quantity > 1 || tx.unitValue !== tx.total);
+                document.getElementById('inp-qty').value = tx.quantity;
+                document.getElementById('inp-unit').value = tx.unitValue;
+                document.getElementById('inp-total').value = tx.total;
+                UI.toggleDetailedMode();
+                document.getElementById('form-title').innerText = "Editar Movimiento";
+                document.getElementById('btn-save-tx').innerText = "Actualizar";
+                document.getElementById('btn-save-tx').classList.replace('bg-blue-600', 'bg-orange-500');
+                App.nav('add');
+            },
+
+            deleteTransaction: (id) => { Swal.fire({ title: '¿Borrar?', icon: 'warning', showCancelButton: true }).then(r => { if (r.isConfirmed) { store.transactions = store.transactions.filter(t => t.id !== id); App.save(); } }); },
+            setSort: (k) => { state.historySort.dir = (state.historySort.key === k && state.historySort.dir === 'asc') ? 'desc' : 'asc'; state.historySort.key = k; UI.renderHistory(); },
+            toggleTxSelection: (id) => { if (state.selectedTx.has(id)) state.selectedTx.delete(id); else state.selectedTx.add(id); UI.updateHistoryHeader(); },
+            toggleSelectAll: (el) => { const v = UI.getCurrentHistoryIds(); if (el.checked) v.forEach(id => state.selectedTx.add(id)); else state.selectedTx.clear(); UI.renderHistory(); UI.updateHistoryHeader(); },
+            deleteSelected: () => { if (!state.selectedTx.size) return; Swal.fire({ title: `Borrar ${state.selectedTx.size}?`, text: "Irreversible", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33' }).then(r => { if (r.isConfirmed) { store.transactions = store.transactions.filter(t => !state.selectedTx.has(t.id)); state.selectedTx.clear(); document.getElementById('chk-all').checked = false; App.save(); } }); },
+            setReportRange: (m) => { const e = new Date(); const s = new Date(); if (m === 12) { s.setMonth(0); s.setDate(1); } else if (m === 1) s.setDate(1); else s.setMonth(s.getMonth() - m); document.getElementById('rpt-end').value = e.toLocaleDateString('en-CA'); document.getElementById('rpt-start').value = s.toLocaleDateString('en-CA'); UI.renderReports(); },
+
+            addServicePrompt: async (eid = null) => {
+                let curr = {}; if (eid) curr = store.recurringServices.find(s => s.id === eid) || {};
+                let opts = "";
+                store.categories.forEach(cat => {
+                    if(cat.groups && cat.groups.length > 0) {
+                        opts += `<optgroup label="${cat.name}">`;
+                        cat.groups.forEach(g => { opts += `<option value="${g}" ${curr.name === g ? 'selected' : ''}>${g}</option>`; });
+                        opts += `</optgroup>`;
+                    }
+                });
+
+                const { value: v } = await Swal.fire({
+                    title: eid ? 'Editar' : 'Nuevo',
+                    html: `
+                        <label class="label-std text-xs">Servicio (Grupo)</label><select id="sn" class="swal2-input mb-2 bg-gray-50">${opts}</select>
+                        <label class="label-std text-xs">Frecuencia</label><select id="sf" class="swal2-input mb-2"><option value="MONTHLY" ${curr.frequency === 'MONTHLY' ? 'selected' : ''}>Mensual (Todos los meses)</option><option value="BIMONTHLY_ODD" ${curr.frequency === 'BIMONTHLY_ODD' ? 'selected' : ''}>Bimestral (Ene, Mar, May...)</option><option value="BIMONTHLY_EVEN" ${curr.frequency === 'BIMONTHLY_EVEN' ? 'selected' : ''}>Bimestral (Feb, Abr, Jun...)</option></select>
+                        <label class="label-std text-xs">Tipo Costo</label><select id="st" class="swal2-input mb-2"><option value="FIJO" ${curr.type === 'FIJO' ? 'selected' : ''}>Fijo</option><option value="VARIABLE" ${curr.type === 'VARIABLE' ? 'selected' : ''}>Variable</option></select>
+                        <label class="label-std text-xs">Costo ($)</label><input id="sc" type="number" class="swal2-input mb-2" value="${curr.cost || ''}" placeholder="0">
+                        <label class="label-std text-xs">Día Corte</label><input id="sd" type="number" class="swal2-input" value="${curr.cutoffDay || ''}" placeholder="Ej: 15">
+                    `,
+                    focusConfirm: false, showCancelButton: true,
+                    preConfirm: () => [document.getElementById('sn').value, document.getElementById('st').value, document.getElementById('sc').value, document.getElementById('sd').value, document.getElementById('sf').value]
+                });
+
+                if (v) {
+                    const [n, t, c, d, f] = v; if (!n) return;
+                    const o = { id: eid || 's' + Date.now(), name: n, type: t, cost: parseFloat(c) || 0, cutoffDay: parseInt(d), frequency: f, alertDays: 3 };
+                    if (eid) { const i = store.recurringServices.findIndex(x => x.id === eid); store.recurringServices[i] = o; } else store.recurringServices.push(o);
+                    App.save(); UI.renderServicesConfig();
+                }
+            },
+            deleteService: (id) => { store.recurringServices = store.recurringServices.filter(s => s.id !== id); App.save(); },
+
+            CategoryManager: {
+                create: () => { document.getElementById('edit-cat-id').value = ""; document.getElementById('edit-cat-name').value = ""; document.getElementById('edit-cat-groups-list').innerHTML = ""; UI.CategoryEditor.addGroupInput(''); App.nav('cat-editor'); },
+                edit: (id) => { const c = store.categories.find(x => x.id === id); if (!c) return; document.getElementById('edit-cat-id').value = c.id; document.getElementById('edit-cat-name').value = c.name; const ct = document.getElementById('edit-cat-groups-list'); ct.innerHTML = ""; (c.groups || []).forEach(g => UI.CategoryEditor.addGroupInput(g)); App.nav('cat-editor'); },
+                save: () => { const id = document.getElementById('edit-cat-id').value, n = document.getElementById('edit-cat-name').value, gs = Array.from(document.querySelectorAll('.cat-group-input')).map(i => i.value.trim()).filter(x => x); if (id) { const i = store.categories.findIndex(x => x.id === id); store.categories[i].name = n; store.categories[i].groups = gs; } else store.categories.push({ id: 'c' + Date.now(), name: n, groups: gs }); App.save(); App.nav('config'); },
+                delete: (id) => { if (store.transactions.some(t => t.categoryId === id)) return Swal.fire('Error', 'En uso', 'error'); store.categories = store.categories.filter(c => c.id !== id); App.save(); }
+            },
+
+            Maintenance: {
+                linkHistory: () => {
+                    let count = 0;
+                    store.transactions.forEach(t => {
+                        if (!t.serviceId) {
+                            const srv = store.recurringServices.find(s => s.name === t.group);
+                            if (srv) { t.serviceId = srv.id; count++; }
+                        }
+                    });
+                    App.save();
+                    Swal.fire('Proceso Terminado', `Se vincularon ${count} registros antiguos.`, 'success');
+                }
+            }
+        };
+
+        const UI = {
+            renderCategoriesSelect: () => { const s = document.getElementById('inp-cat'); s.innerHTML = '<option value="">Seleccione...</option>'; store.categories.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.text = c.name; s.appendChild(o) }); },
+            
+            updateGroupsAndServices: () => {
+                const cid = document.getElementById('inp-cat').value, g = document.getElementById('inp-group'), c = store.categories.find(x => x.id === cid);
+                g.innerHTML = '<option value="">---</option>'; if (c) (c.groups || []).forEach(gr => { const o = document.createElement('option'); o.value = gr; o.text = gr; g.appendChild(o) });
+                
+                const categoryGroups = c ? c.groups : [];
+                const relevantServices = store.recurringServices.filter(s => categoryGroups.includes(s.name));
+                const hasMatches = relevantServices.length > 0;
+
+                document.getElementById('box-recurring-select').classList.toggle('hidden-section', !hasMatches);
+                const sl = document.getElementById('inp-service-link');
+                sl.innerHTML = '<option value="">(Ninguno)</option>';
+                relevantServices.forEach(s => { const o = document.createElement('option'); o.value = s.id; o.text = s.name; sl.appendChild(o); });
+            },
+
+            onGroupChange: () => {
+                const groupName = document.getElementById('inp-group').value;
+                if (!groupName) return;
+                const srv = store.recurringServices.find(s => s.name === groupName);
+                if (srv) {
+                    const sl = document.getElementById('inp-service-link');
+                    if(sl.querySelector(`option[value="${srv.id}"]`)) {
+                        sl.value = srv.id;
+                        UI.autofillService();
+                        const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+                        Toast.fire({ icon: 'info', title: 'Servicio vinculado' });
+                    }
+                }
+            },
+
+            autofillService: () => {
+                const s = store.recurringServices.find(x => x.id === document.getElementById('inp-service-link').value);
+                if (s) {
+                    if (s.type === 'FIJO') document.getElementById('inp-total').value = s.cost;
+                    else document.getElementById('inp-total').value = "";
+                }
+            },
+
+            toggleDetailedMode: () => { const d = document.getElementById('toggle-detailed').checked; document.getElementById('detailed-inputs').classList.toggle('hidden-section', !d); document.getElementById('inp-total').readOnly = d; document.getElementById('inp-total').classList.toggle('bg-gray-100', d); },
+            calcTotal: () => { document.getElementById('inp-total').value = (parseFloat(document.getElementById('inp-qty').value) || 0) * (parseFloat(document.getElementById('inp-unit').value) || 0); },
+            toggleConfigSection: (id) => document.getElementById(id).classList.toggle('hidden-section'),
+            renderServicesConfig: () => { const l = document.getElementById('list-services-cfg'); l.innerHTML = ""; store.recurringServices.forEach(s => { const ft=FREQ_LABELS[s.frequency]||'Mensual'; l.innerHTML += `<div class="flex justify-between bg-white p-2 border mb-1 rounded text-sm"><div><b>${s.name}</b> <span class="text-xs text-gray-400">(${ft})</span></div><div><button onclick="App.addServicePrompt('${s.id}')" class="text-blue-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="App.deleteService('${s.id}')" class="text-red-500"><i class="fas fa-trash"></i></button></div></div>` }) },
+            renderCategoriesConfig: () => { const l = document.getElementById('list-cats-cfg'); l.innerHTML = ""; store.categories.forEach(c => { l.innerHTML += `<div class="flex justify-between bg-white p-2 border mb-1 rounded text-sm"><b>${c.name}</b><div><button onclick="App.CategoryManager.edit('${c.id}')" class="text-purple-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="App.CategoryManager.delete('${c.id}')" class="text-red-500"><i class="fas fa-trash"></i></button></div></div>` }) },
+            CategoryEditor: { addGroupInput: (v) => { const d = document.createElement('div'); d.className = "flex gap-2 mb-1"; d.innerHTML = `<input class="cat-group-input w-full border rounded p-1 text-sm" value="${v}"><button type="button" onclick="this.parentElement.remove()" class="text-red-400">X</button>`; document.getElementById('edit-cat-groups-list').appendChild(d) } },
+
+            updateDashboard: () => {
+                const now = new Date();
+                const prefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                const mTx = store.transactions.filter(t => t.date.startsWith(prefix));
+                document.getElementById('dash-total').innerText = "$ " + mTx.reduce((s, t) => s + t.total, 0).toLocaleString();
+                document.getElementById('dash-count').innerText = `${mTx.length} transacciones`;
+
+                const al = document.getElementById('alerts-list'); al.innerHTML = ""; let has = false;
+                
+                store.recurringServices.forEach(s => {
+                    let showAlert = true;
+                    const currentMonthIndex = now.getMonth() + 1;
+                    if (s.frequency === 'BIMONTHLY_ODD' && (currentMonthIndex % 2 === 0)) showAlert = false;
+                    if (s.frequency === 'BIMONTHLY_EVEN' && (currentMonthIndex % 2 !== 0)) showAlert = false;
+
+                    if (showAlert) {
+                        if (!mTx.some(t => t.serviceId === s.id)) {
+                            const diff = s.cutoffDay - now.getDate();
+                            if (diff <= 3) {
+                                has = true;
+                                al.innerHTML += `<div onclick="App.payFromAlert('${s.id}')" class="alert-card bg-white border-l-4 ${diff < 0 ? 'border-red-500' : 'border-orange-400'} p-3 shadow text-sm mb-2 cursor-pointer hover:bg-gray-50 flex justify-between items-center">
+                                    <div><b>${s.name}</b> <span class="text-[10px] text-gray-500 block">Vence día ${s.cutoffDay}</span></div>
+                                    <div class="text-red-600 font-bold text-xs">${diff < 0 ? 'Vencido' : 'Pagar'} <i class="fas fa-chevron-right ml-1"></i></div>
+                                </div>`;
+                            }
+                        }
+                    }
+                });
+                document.getElementById('dash-alerts-container').classList.toggle('hidden-section', !has);
+            },
+
+            getCurrentHistoryIds: () => { const term = document.getElementById('search-history').value.toLowerCase(); return store.transactions.filter(t => (t.category || "").toLowerCase().includes(term) || t.description.toLowerCase().includes(term)).map(t => t.id); },
+            
+            renderHistory: () => {
+                const l = document.getElementById('history-list'); l.innerHTML = '';
+                const term = document.getElementById('search-history').value.toLowerCase();
+                let data = store.transactions.filter(t => (t.category || "").toLowerCase().includes(term) || t.description.toLowerCase().includes(term));
+                
+                state.filteredCount = data.length;
+
+                const k = state.historySort.key; const d = state.historySort.dir === 'asc' ? 1 : -1;
+                data.sort((a, b) => (a[k] || "") < (b[k] || "") ? -1 * d : 1 * d);
+                
+                ['date', 'category', 'group'].forEach(key => document.getElementById(`sort-icon-${key}`).className = `fas fa-sort${state.historySort.key === key ? '-' + (state.historySort.dir === 'asc' ? 'up' : 'down') : ''} ml-1`);
+                const allVisibleSelected = data.length > 0 && data.slice(0, 50).every(t => state.selectedTx.has(t.id));
+                document.getElementById('chk-all').checked = allVisibleSelected;
+                
+                UI.updateHistoryHeader();
+
+                const limit = 50;
+                const visibleData = data.slice(0, limit);
+
+                visibleData.forEach(t => {
+                    const isSel = state.selectedTx.has(t.id);
+                    l.innerHTML += `<div class="bg-white p-2 rounded shadow flex items-center gap-3 border-l-4 ${isSel ? 'border-green-500 bg-green-50' : 'border-blue-500'}"><input type="checkbox" class="checkbox-std" ${isSel ? 'checked' : ''} onchange="App.toggleTxSelection('${t.id}')"><div class="flex-1 overflow-hidden"><div class="flex justify-between"><span class="font-bold text-sm truncate">${t.category} - ${t.group}</span><span class="font-bold text-sm">$ ${t.total.toLocaleString()}</span></div><div class="flex justify-between mt-1"><span class="text-xs text-gray-400">${t.date} • ${t.description}</span><button onclick="App.editTransaction('${t.id}')" class="text-orange-400 text-xs"><i class="fas fa-pencil-alt"></i></button></div></div></div>`;
+                });
+                if(data.length > limit) l.innerHTML += `<div class="text-center text-xs text-gray-400 mt-4 italic">Mostrando últimos ${limit} de ${data.length}. Usa el buscador.</div>`;
+            },
+
+            updateHistoryHeader: () => {
+                const total = store.transactions.length;
+                const selected = state.selectedTx.size;
+                const found = state.filteredCount;
+                const term = document.getElementById('search-history').value;
+
+                let text = `- ${total}`;
+                if (selected > 0) text = `- ${selected} seleccionados`;
+                else if (term) text = `- ${found} encontrados`;
+
+                document.getElementById('history-counter').innerText = text;
+                document.getElementById('actions-history').classList.toggle('hidden-section', selected === 0);
+            },
+
+            renderReports: () => {
+                const start = document.getElementById('rpt-start').value; const end = document.getElementById('rpt-end').value; const type = document.getElementById('rpt-type').value;
+                if (!start || !end) return;
+                const filtered = store.transactions.filter(t => t.date >= start && t.date <= end);
+                const sum = filtered.reduce((s, t) => s + t.total, 0);
+                document.getElementById('rpt-total-sum').innerText = "$ " + sum.toLocaleString();
+                const diffTime = new Date(end) - new Date(start); const months = Math.max(diffTime / (1000 * 60 * 60 * 24 * 30), 1);
+                document.getElementById('rpt-avg').innerText = "$ " + Math.round(sum / months).toLocaleString();
+                const ctx = document.getElementById('chart-main').getContext('2d'); if (state.reportChart) state.reportChart.destroy();
+                const isTrend = (diffTime / (1000 * 60 * 60 * 24)) > 35;
+                let data = {}; let options = { responsive: true, maintainAspectRatio: false, plugins: {} };
+                const totalLabelsPlugin = { id: 'totalLabels', afterDatasetsDraw: (chart) => { if (chart.config.type !== 'bar') return; const { ctx, scales: { x, y } } = chart; ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.font = 'bold 10px "Segoe UI", sans-serif'; ctx.fillStyle = '#4b5563'; const dsCount = chart.data.datasets.length; if (dsCount === 0) return; const dataLen = chart.data.datasets[0].data.length; for (let i = 0; i < dataLen; i++) { let s = 0; let highestY = y.getPixelForValue(0); for (let d = 0; d < dsCount; d++) { const v = chart.data.datasets[d].data[i]; s += v; const meta = chart.getDatasetMeta(d); if (!meta.hidden && meta.data[i] && meta.data[i].y < highestY) highestY = meta.data[i].y; } if (s > 0) { const xPos = x.getPixelForValue(chart.data.labels[i]); ctx.fillText("$ " + Math.round(s).toLocaleString(), xPos, highestY - 5); } } ctx.restore(); } };
+                if (type === 'doughnut' || (!isTrend && type === 'bar')) { const c = {}; filtered.forEach(t => { const k = t.category || "Otro"; c[k] = (c[k] || 0) + t.total }); data = { labels: Object.keys(c), datasets: [{ label: 'Total', data: Object.values(c), backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280', '#ec4899', '#14b8a6'] }] }; }
+                else {
+                    const keys = [...new Set(filtered.map(t => t.date.substring(0, 7)))].sort();
+                    if (type === 'stacked' || type === 'grouped') {
+                        const cats = [...new Set(filtered.map(t => t.category))].sort(); const datasets = cats.map((c, i) => ({ label: c, data: keys.map(k => filtered.filter(t => t.date.startsWith(k) && t.category === c).reduce((s, t) => s + t.total, 0)), backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280', '#ec4899', '#14b8a6'][i % 8] }));
+                        data = { labels: keys, datasets: datasets }; if (type === 'stacked') options.scales = { x: { stacked: true }, y: { stacked: true } };
+                    } else { const totals = keys.map(k => filtered.filter(t => t.date.startsWith(k)).reduce((s, t) => s + t.total, 0)); data = { labels: keys, datasets: [{ label: 'Total', data: totals, backgroundColor: '#3b82f6', borderColor: '#2563eb', tension: 0.3, type: type === 'line' ? 'line' : 'bar', fill: type === 'line' }] }; }
+                }
+                state.reportChart = new Chart(ctx, { type: (type === 'stacked' || type === 'grouped') ? 'bar' : type, data: data, options: options, plugins: [totalLabelsPlugin] });
+            }
+        };
+
+        const BackupManager = {
+            exportJSON: async () => {
+                const dataStr = JSON.stringify(store, null, 2);
+                const fileName = `backup_gastos_${new Date().getTime()}.json`;
+                try {
+                    if (!window.Capacitor) throw new Error("Modo Web");
+                    const result = await Capacitor.Plugins.Filesystem.writeFile({ path: fileName, data: dataStr, directory: 'CACHE', encoding: 'utf8' });
+                    await Capacitor.Plugins.Share.share({ title: 'Backup Gastos', text: 'Archivo JSON', url: result.uri, dialogTitle: 'Guardar en...' });
+                } catch (e) {
+                    if (e.message && e.message.includes('canceled')) return;
+                    if (e.message !== "Modo Web") alert("Error: " + e.message);
+                    const b = new Blob([dataStr], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = fileName; document.body.appendChild(a); a.click();
+                }
+            },
+            importJSON: (i) => { const f = i.files[0]; if (!f) return; const r = new FileReader(); r.onload = e => { try { store = JSON.parse(e.target.result); localStorage.setItem('gastosApp_data', JSON.stringify(store)); Swal.fire('Ok', 'Restaurado', 'success').then(() => location.reload()); } catch (x) { Swal.fire('Error', 'JSON mal', 'error'); } }; r.readAsText(f); },
+            importCSV: (input) => {
+                const file = input.files[0]; if(!file) return;
+                Swal.fire({ title: 'Procesando CSV...', didOpen: () => Swal.showLoading() });
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const text = e.target.result; const lines = text.split('\n'); let count = 0;
+                        const catMap = {}; store.categories.forEach(c => catMap[c.name] = c.id);
+                        for (let i = 1; i < lines.length; i++) {
+                            const line = lines[i].trim(); if (!line) continue;
+                            const cols = line.split(';'); if (cols.length < 7) continue;
+                            let [fecha, catNombre, grupo, desc, cant, unit, total] = cols;
+                            const cleanNum = (v) => parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
+                            let catId = catMap[catNombre];
+                            if(!catId) { const fallback = store.categories.find(c => c.name === 'Varios' || c.name === 'Otros'); catId = fallback ? fallback.id : store.categories[0].id; }
+                            let dateISO = fecha;
+                            if(fecha.includes('/')) { const parts = fecha.split('/'); if(parts.length === 3) dateISO = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`; }
+                            store.transactions.push({ id: crypto.randomUUID(), date: dateISO, categoryId: catId, category: catNombre, group: grupo, description: desc.replace(/"/g, ''), quantity: cleanNum(cant), unitValue: cleanNum(unit), total: cleanNum(total), serviceId: "" });
+                            count++;
+                        }
+                        localStorage.setItem('gastosApp_data', JSON.stringify(store));
+                        Swal.fire('Éxito', `Se importaron ${count} registros desde CSV.`, 'success').then(() => location.reload());
+                    } catch(err) { Swal.fire('Error', 'Formato CSV inválido.', 'error'); }
+                };
+                reader.readAsText(file, "ISO-8859-1");
+            },
+            exportSelected: async () => { const sel = store.transactions.filter(t => state.selectedTx.has(t.id)); if (sel.length) await BackupManager.generateCSV(sel, "seleccion.csv"); state.selectedTx.clear(); document.getElementById('chk-all').checked = false; UI.renderHistory(); UI.updateHistoryHeader(); },
+            generateCSV: async (d, fname = "export.csv") => { 
+                if (!d || !d.length) return Swal.fire('Info', 'Nada que exportar', 'info'); 
+                let csv = "Fecha;Categoria;Grupo;Descripcion;Cantidad;Unitario;Total;Estado\n"; 
+                d.forEach(t => csv += `${t.date};${t.category};${t.group};"${(t.description || "").replace(/;/g, ",")}";${t.quantity};${t.unitValue};${t.total};${t.serviceId ? "Recurrente" : "Gasto"}\n`); 
+                try {
+                    if (window.Capacitor) {
+                        const r = await Capacitor.Plugins.Filesystem.writeFile({ path: fname, data: csv, directory: 'CACHE', encoding: 'utf8' });
+                        await Capacitor.Plugins.Share.share({ title: 'CSV', url: r.uri });
+                    } else throw new Error("Web");
+                } catch (e) {
+                    if (e.message && e.message.includes('canceled')) return;
+                    const b = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = fname; document.body.appendChild(a); a.click(); 
+                }
+            }
+        };
+
+        App.init();
+    </script>
+</body>
+</html>
