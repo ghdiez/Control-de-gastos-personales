@@ -930,13 +930,49 @@
                 const isTrend = (diffTime / (1000 * 60 * 60 * 24)) > 35;
                 let data = {}; let options = { responsive: true, maintainAspectRatio: false, plugins: {} };
                 const totalLabelsPlugin = { id: 'totalLabels', afterDatasetsDraw: (chart) => { if (chart.config.type !== 'bar') return; const { ctx, scales: { x, y } } = chart; ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.font = 'bold 10px "Segoe UI", sans-serif'; ctx.fillStyle = '#4b5563'; const dsCount = chart.data.datasets.length; if (dsCount === 0) return; const dataLen = chart.data.datasets[0].data.length; for (let i = 0; i < dataLen; i++) { let s = 0; let highestY = y.getPixelForValue(0); for (let d = 0; d < dsCount; d++) { const v = chart.data.datasets[d].data[i]; s += v; const meta = chart.getDatasetMeta(d); if (!meta.hidden && meta.data[i] && meta.data[i].y < highestY) highestY = meta.data[i].y; } if (s > 0) { const xPos = x.getPixelForValue(chart.data.labels[i]); ctx.fillText("$ " + Math.round(s).toLocaleString(), xPos, highestY - 5); } } ctx.restore(); } };
-                if (type === 'doughnut' || (!isTrend && type === 'bar')) { const c = {}; filtered.forEach(t => { const k = t.category || "Otro"; c[k] = (c[k] || 0) + t.total }); data = { labels: Object.keys(c), datasets: [{ label: 'Total', data: Object.values(c), backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280', '#ec4899', '#14b8a6'] }] }; }
+                if (type === 'doughnut' || (!isTrend && type === 'bar')) {
+                    const uniqueCats = [...new Set(filtered.map(t => t.category))];
+                    const useGroups = uniqueCats.length === 1;
+
+                    const c = {};
+                    filtered.forEach(t => {
+                        const k = useGroups ? (t.group || "Sin Grupo") : (t.category || "Otro");
+                        c[k] = (c[k] || 0) + t.total
+                    });
+
+                    const bgColors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280', '#ec4899', '#14b8a6', '#6366f1', '#14b8a6', '#f43f5e', '#84cc16'];
+                    data = {
+                        labels: Object.keys(c),
+                        datasets: [{
+                            label: useGroups ? 'Total por Grupo' : 'Total por Categoría',
+                            data: Object.values(c),
+                            backgroundColor: bgColors.slice(0, Object.keys(c).length).map((_, i) => bgColors[i % bgColors.length])
+                        }]
+                    };
+                }
                 else {
                     const keys = [...new Set(filtered.map(t => t.date.substring(0, 7)))].sort();
                     if (type === 'stacked' || type === 'grouped') {
-                        const cats = [...new Set(filtered.map(t => t.category))].sort(); const datasets = cats.map((c, i) => ({ label: c, data: keys.map(k => filtered.filter(t => t.date.startsWith(k) && t.category === c).reduce((s, t) => s + t.total, 0)), backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280', '#ec4899', '#14b8a6'][i % 8] }));
-                        data = { labels: keys, datasets: datasets }; if (type === 'stacked') options.scales = { x: { stacked: true }, y: { stacked: true } };
-                    } else { const totals = keys.map(k => filtered.filter(t => t.date.startsWith(k)).reduce((s, t) => s + t.total, 0)); data = { labels: keys, datasets: [{ label: 'Total', data: totals, backgroundColor: '#3b82f6', borderColor: '#2563eb', tension: 0.3, type: type === 'line' ? 'line' : 'bar', fill: type === 'line' }] }; }
+                        const uniqueCats = [...new Set(filtered.map(t => t.category))];
+                        let dimensions = uniqueCats.sort();
+                        let field = 'category';
+
+                        if (uniqueCats.length === 1) {
+                            dimensions = [...new Set(filtered.map(t => t.group))].sort();
+                            field = 'group';
+                        }
+
+                        const datasets = dimensions.map((dim, i) => ({
+                            label: dim,
+                            data: keys.map(k => filtered.filter(t => t.date.startsWith(k) && t[field] === dim).reduce((s, t) => s + t.total, 0)),
+                            backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280', '#ec4899', '#14b8a6'][i % 8]
+                        }));
+                        data = { labels: keys, datasets: datasets };
+                        if (type === 'stacked') options.scales = { x: { stacked: true }, y: { stacked: true } };
+                    } else {
+                        const totals = keys.map(k => filtered.filter(t => t.date.startsWith(k)).reduce((s, t) => s + t.total, 0));
+                        data = { labels: keys, datasets: [{ label: 'Total', data: totals, backgroundColor: '#3b82f6', borderColor: '#2563eb', tension: 0.3, type: type === 'line' ? 'line' : 'bar', fill: type === 'line' }] };
+                    }
                 }
                 state.reportChart = new Chart(ctx, { type: (type === 'stacked' || type === 'grouped') ? 'bar' : type, data: data, options: options, plugins: [totalLabelsPlugin] });
             }
