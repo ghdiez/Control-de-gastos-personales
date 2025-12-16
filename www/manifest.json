@@ -1,6 +1,6 @@
 {
-  "name": "Control de Gastos",
-  "short_name": "Mis Gastos",
+  "name": "SmartFinance",
+  "short_name": "SmartFinance",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f3f4f6",

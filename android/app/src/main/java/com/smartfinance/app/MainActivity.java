@@ -1,4 +1,4 @@
-package com.gastos.app;
+package com.smartfinance.app;
 
 import com.getcapacitor.BridgeActivity;
 

@@ -23,3 +23,118 @@ ok, ya está, pero  hagamos algunos cambios.
 -Agregar el selector de idioma en la parte superior de la app, extremo superior derecho, encima de la tarjeta de balance. Impleméntala igual que en la app Vitalis, la bandera (Colombia-español, USA-inglés, Brasil-portugués, etc.), como un conmutador cíclico.
 2. Los ingresos también deben poder visualizarse, editarse y eliminarse. Sugiere la forma de hacerlo.
 3. Traslada el botón "Ajustar balance" a la izquierda del botón de idioma, en la misma fila. Este botón debe agrupar la funcionalidad de "Ajustar balance" y "orden del balance"
+===========================
+ya funcionó, pero la app es demasiado lenta en el PC, tarda casi un minuto en responder al tap en un botón, no me quiero imaginar cómo va a funcionar en el celular. Revisa a ver cuál puede ser la causa.
+La consola de Chrome muestra esto:
+VM305:63 cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+
+En la barra superior cambia el código del país por la bandera.
+==========================
+el historial consta de 3764 registros. Si utilizamos localForage en lugar de localStorage, mejoraría el tiempo de respuesta?
+==========================
+agrega un botón ayuda (?) al lado derecho de la bandera, como un menú con 2 opciones:
+1. Acerca de: modal pequeño con este contenido: copyright GabHoX ghdiez.01@gmail.com - 2025 todos los derechos reservados. En cada idioma.
+2. La ayuda debe mostrar una ventana emergente con descripción detallada de cada funcionalidad de cada funcionalidad, e incluir ejemplos de las mismas. Agregar un botón cerrar o regresar, que permita volver a la app.
+
+Cada modal tendrá bordes redondeados y un aspecto moderno y atractivo.
+==========================
+1. bordes de los modales cuadrados, hazlos redondeados.
+2. El modal de ayuda no tiene ejemplos de uso, haz la ayuda más completa.
+3. El modal presenta 2 botones de cierre, uno pequeño a la izquierda que no hace nada. Elimina este último.
+==========================
+1. agrega información, con ejemplos, acerca de categorías y grupos, servicios recurrentes y backup.
+2. el botón backup, que pusiste en opciones de saldo, trasládalo a configuración. Crea una sección llamada "Gestión de datos" (con sus traducciones). En ella habrá 2 grupos: Importar y Exportar, visiblemente diferenciados.
+==========================
+1. Agranda los botones en la barra superior un 50%. Separa un poco más los botones, para que la UI no se vea saturada.
+2. vamos a implementar temas. Todos los elementos de la UI deberán responder de manera dinámica a los mismos. Utiliza tonos suaves.
+El botón será un conmutador cíclico y estará ubicado entre la bandera y ayuda. 
+
+1. Verde. 
+2. Azul.
+3. Alto contraste.
+1. Verde.
+==========================
+muchos elementos de la UI no se ajustan al tema, revisa cuidadosamente y haz los cambios completos.
+1. Menú inicio:
+-tarjetas: saldo y gastos
+-botones: reportes avanzados y configuración, Inicio, + e historial.
+
+2. menú +
+-botones: gasto,ingreso, guardar y todos los elementos de entrada de datos
+
+3. Historial: Gastos, ingresos, etc.
+
+lo mismo pasa en ayuda y acerca de. Revisa toda la UI de la app.
+============================
+-borraste casi todo el contenido de la ayuda, restáuralo.
+-en el menú ayuda, los botones no responden al tema. El título del menú tampoco.
+-error persistente:
+(index):1143 Uncaught TypeError: Cannot set properties of null (setting 'value')
+    at Object.resetForm ((index):1143:62)
+    at Object.nav ((index):1125:64)
+    at HTMLButtonElement.onclick ((index):861:30)
+-los colores del tema verde los quiero un poco más claros
+-los colores del tema azul los quiero un poco más claros
+================================
+1. el botón save en crear nueva entrada no responde al tema.
+2. te voy a dar tonos de colores para cada tema, para que los utilices en la app:
+-verde: RGB: rgb(232, 245, 233), RGB: rgb(76, 175, 80)
+-azul: RGB: rgb(227, 242, 253), RGB: rgb(30, 136, 229)
+-alto contraste: RGB: rgb(0, 0, 0), RGB: rgb(0, 0, 0), RGB: rgb(255, 215, 0)
+combínalos con blanco o gris/negro, según sea más adecuado
+================================
+-en el modal opciones de saldo, el botón "configurar semáforo" debe tener el mismo tono azul que "ajustar saldo".  El botón cancel (nombre quemado, modifícalo) también debe tomar el color del tema.
+-el modal configurar semáforo no tiene bordes redondeados.
+-el modal ajustar sasaldo no tiene bordes redondeados.
+================================
+-en "registrar movimiento" los botones "Descartar/volver" y "Guardar" deben ocupar cada uno el 50%.
+-al hacer clic sobre un registro en el historial para editarlo, se produce este error:
+(index):1275 Uncaught TypeError: UI.setMovementType is not a function
+    at Object.editTransaction ((index):1275:20)
+    at Object.editMovement ((index):1310:58)
+    at HTMLDivElement.onclick ((index):1:5)
+	
+================================
+-al hacer clic en historial sobre un registro se abre la ventana "Registrar movimiento". Se conservan los valores, excepto cantidad, valor unitario y total. Se deben conservar para que sea el usuario quien los modifique.
+al hacer clic sobre Descartar/volver se produce el error:
+(index):534 Uncaught TypeError: UI.discardForm is not a function
+    at HTMLButtonElement.onclick ((index):534:53)
+
+al hacer clic sobre Guardar se produce el error:
+	(index):437 Uncaught TypeError: App.saveTx is not a function
+    at HTMLFormElement.onsubmit ((index):437:110)
+
+-en historial, el rótulo de la columna Value está quemado.
+===============================
+-el único problema que se resolvió fue el de los botones Descartar/volver y Guardar, los demás persisten.
+-Error al editar:
+(index):1385 Uncaught TypeError: Cannot set properties of null (setting 'value')
+    at Object.editTransaction ((index):1385:60)
+    at Object.editMovement ((index):1409:58)
+    at HTMLDivElement.onclick ((index):1:5)
+	
+-Todavía se borra el campo valor.
+-Value permanece quemado en el código. Se muestra value sin importar el idioma seleccionado.
+-al hacer clic en uno de los registros de la lista "recent activity" se abre el historial, pero no con el elemento seleccionado en recientes. Las 2 listas (recientes) e historial, deberían mostrar los mísmos registros. Eso se debería resolver ordenando el historial, mostrando primero los más recientes. De todos modos, se debe seleccionar el registro sobre el cual el usuario hizo clic en recientes de la ventana Inicio.
+==========================
+buen avance, persiste la etiqueta de columna "value" quemada en el historial.
+==========================
+en editar movimiento, el botón Guardar no asume el color del tema, parece quemado en código.
+==========================
+en registrar movimiento, los botones Gasto e Ingreso tiene la etiqueta quemada en código.
+==========================
+en configuración, el botón restablecer datos de fábrica agrándalo al 200% de su tamaño actual, lo mismo que el texto. Mantén la fuente de color rojo.
+==========================
+compiló.
+El nombre interno de la app sigue siendo "Mis Gastos". Modifícalo para que corresponda con el nombre visual de SmartFinance.
+Recompila y entrégame de nuevo el archivo compilado, conservando el número de versión.
+Genera un ícono para la app, similar al de vitalis.
+==========================
+te describo la situación:
+-tengo una versión anterior de la app, llamada mis gastos, instalada en el celular.
+-al intentar instalar esta "nueva" versión me encuentro con que Android me pide Actualizar "Mis gastos", por lo que supongo que debe quedar algún remanente del nombre en algún lugar. También me muestra el mismo ícono de mi app anterior.
+utiliza un procedimiento más robusto que fuerce la actualización o cambio del nombre y el ícono.  Luego de eso, genera nuevamanete la apk, conservando el número de versión.
+==========================
+el ícono ahora es el default de Capacitor.
+Android continúa diciendo que Actualice la app existente.
+Revisa cuidadosamente y resuelve de manera definitva.
