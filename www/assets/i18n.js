@@ -87,6 +87,15 @@ const translations = {
         name: "Nombre",
         add_group: "+ Grupo",
         cancel: "Cancelar",
+        month_total: "Gasto Mes",
+        month_tx: "Movimientos",
+        recent_activity: "Actividad Reciente",
+        view_all: "Ver todo",
+        reports: "Reportes",
+        lbl_min_red: "Mínimo (Rojo)",
+        lbl_goal_green: "Meta (Verde)",
+        adjust_bal_label: "Saldo Sistema: $ {bal}. Ingresa tu saldo real:",
+        cancel: "Cancelar",
         nav_home: "Inicio",
         nav_history: "Historial",
         cat_housing: "Vivienda",
@@ -326,6 +335,14 @@ const translations = {
         balance_options: "Balance Options",
         config_thresholds: "Config Thresholds",
         adjust_balance: "Adjust Balance",
+        month_total: "Month Expense",
+        month_tx: "Transactions",
+        recent_activity: "Recent Activity",
+        view_all: "View All",
+        reports: "Reports",
+        lbl_min_red: "Minimum (Red)",
+        lbl_goal_green: "Goal (Green)",
+        adjust_bal_label: "System Balance: $ {bal}. Enter real balance:",
         lbl_h_expenses: "EXPENSES",
         lbl_h_incomes: "INCOME"
     },
@@ -488,6 +505,14 @@ const translations = {
         lbl_export: "Exportar",
         help_cats_title: "Categorias e Grupos",
         help_cats_text: "Classifique suas despesas. Crie novas categorias ou adicione grupos às existentes.",
+        month_total: "Despesa Do Mês",
+        month_tx: "Movimentos",
+        recent_activity: "Atividade Recente",
+        view_all: "Ver tudo",
+        reports: "Relatórios",
+        lbl_min_red: "Mínimo (Vermelho)",
+        lbl_goal_green: "Meta (Verde)",
+        adjust_bal_label: "Saldo Sistema: $ {bal}. Insira saldo real:",
         help_backup_title: "Backup e Transferência",
         help_backup_text: "Exporte seus dados para salvá-los ou transferi-los para outro dispositivo."
     }
@@ -540,6 +565,8 @@ const I18n = {
             UI.renderReports();
             UI.renderCategoriesConfig();
         }
+
+        if (window.App && App.translateDefaults) App.translateDefaults(lang);
     },
 
     updatePage: () => {

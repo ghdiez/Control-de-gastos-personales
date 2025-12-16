@@ -301,6 +301,7 @@
             background: var(--card-bg);
             color: var(--text-secondary);
             border: 2px solid var(--border-color);
+            border-radius: 16px !important;
         }
 
         div:where(.swal2-container) .swal2-title {
@@ -314,6 +315,11 @@
         div:where(.swal2-container) button.swal2-confirm {
             background-color: var(--accent-color) !important;
             color: #fff;
+            border-radius: 12px !important;
+        }
+
+        div:where(.swal2-container) button.swal2-cancel {
+            border-radius: 12px !important;
         }
     </style>
 </head>
@@ -907,13 +913,44 @@
             settings: {
                 balanceThresholds: { min: 500000, mid: 1000000 }
             },
-            categories: [
-                { id: 'cat_vivienda', name: 'Vivienda', groups: ['Arriendo', 'Reparaciones', 'Muebles', 'Impuesto', 'Limpieza', 'Otro'] },
-                { id: 'cat_servicios', name: 'Servicios', groups: ['Agua', 'Luz', 'Gas', 'Internet', 'Celular', 'Administración', 'Suscripciones'] },
-                { id: 'cat_alimentos', name: 'Alimentos', groups: ['Mercado', 'Restaurante'] },
-                { id: 'cat_transporte', name: 'Transporte', groups: ['Bus', 'Taxi', 'Gasolina'] }
-            ],
+            categories: [], // Populated dynamically
             recurringServices: []
+        };
+
+        const DEFAULTS_BY_LANG = {
+            es: [
+                { id: 'c1', name: 'Vivienda', groups: ['Arriendo/Hipoteca', 'Servicios Públicos', 'Mantenimiento'] },
+                { id: 'c2', name: 'Alimentos', groups: ['Mercado', 'Restaurantes', 'Domicilios'] },
+                { id: 'c3', name: 'Transporte', groups: ['Gasolina', 'Transporte Público', 'Mantenimiento', 'Seguros'] },
+                { id: 'c4', name: 'Salud', groups: ['Consultas', 'Medicamentos', 'Seguro Médico'] },
+                { id: 'c5', name: 'Ocio', groups: ['Cine', 'Viajes', 'Hobbies'] },
+                { id: 'c6', name: 'Educación', groups: ['Cursos', 'Libros', 'Matrícula'] },
+                { id: 'c7', name: 'Compras', groups: ['Ropa', 'Tecnología', 'Hogar'] },
+                { id: 'c8', name: 'Financiero', groups: ['Préstamos', 'Tarjetas de Crédito', 'Inversiones'] },
+                { id: 'c9', name: 'Varios', groups: ['Varios', 'Donaciones'] }
+            ],
+            en: [
+                { id: 'c1', name: 'Housing', groups: ['Rent/Mortgage', 'Utilities', 'Maintenance'] },
+                { id: 'c2', name: 'Food', groups: ['Groceries', 'Restaurants', 'Delivery'] },
+                { id: 'c3', name: 'Transport', groups: ['Gas', 'Public Transit', 'Maintenance', 'Insurance'] },
+                { id: 'c4', name: 'Health', groups: ['Consultations', 'Meds', 'Health Insurance'] },
+                { id: 'c5', name: 'Leisure', groups: ['Movies', 'Travel', 'Hobbies'] },
+                { id: 'c6', name: 'Education', groups: ['Courses', 'Books', 'Tuition'] },
+                { id: 'c7', name: 'Shopping', groups: ['Clothes', 'Tech', 'Home'] },
+                { id: 'c8', name: 'Financial', groups: ['Loans', 'Credit Cards', 'Investments'] },
+                { id: 'c9', name: 'Others', groups: ['Misc', 'Donations'] }
+            ],
+            pt: [
+                { id: 'c1', name: 'Moradia', groups: ['Aluguel', 'Serviços Públicos', 'Manutenção'] },
+                { id: 'c2', name: 'Alimentação', groups: ['Mercado', 'Restaurantes', 'Delivery'] },
+                { id: 'c3', name: 'Transporte', groups: ['Combustível', 'Transporte Público', 'Manutenção', 'Seguro'] },
+                { id: 'c4', name: 'Saúde', groups: ['Consultas', 'Medicamentos', 'Plano de Saúde'] },
+                { id: 'c5', name: 'Lazer', groups: ['Cinema', 'Viagens', 'Hobbies'] },
+                { id: 'c6', name: 'Educação', groups: ['Cursos', 'Livros', 'Mensalidade'] },
+                { id: 'c7', name: 'Compras', groups: ['Roupas', 'Tecnologia', 'Casa'] },
+                { id: 'c8', name: 'Financeiro', groups: ['Empréstimos', 'Cartão de Crédito', 'Investimentos'] },
+                { id: 'c9', name: 'Outros', groups: ['Diversos', 'Doações'] }
+            ]
         };
 
         let store = { ...DEFAULT_DATA };
@@ -922,6 +959,9 @@
         const App = {
             init: async () => {
                 try {
+                    // Initialize I18n FIRST to know the language
+                    I18n.init();
+
                     // Initialize LocalForage
                     localforage.config({ name: 'GastosApp', storeName: 'data' });
 
@@ -931,25 +971,23 @@
                     if (!saved) {
                         const localSaved = localStorage.getItem('gastosApp_data');
                         if (localSaved) {
-                            saved = JSON.parse(localSaved); // It was stringified
-                            // We don't save immediately here, we let the merge logic handle it, 
-                            // but we will mark it for saving to complete migration.
+                            saved = JSON.parse(localSaved);
                             console.log("Migrating from localStorage to localForage...");
                         }
                     }
 
                     if (saved) {
-                        // If it came from localForage it might already be an object if we stored it as such, 
-                        // but for consistency with previous stringify logic, let's assume valid object or parse it.
-                        // localForage stores objects natively, but our old logic used JSON.stringify. 
-                        // To be safe: checks type.
                         const parsed = (typeof saved === 'string') ? JSON.parse(saved) : saved;
                         store = { ...DEFAULT_DATA, ...parsed, settings: { ...DEFAULT_DATA.settings, ...(parsed.settings || {}) } };
                         store.incomes = store.incomes || [];
+                    } else {
+                        // NO DATA FOUND -> Generate Localized Defaults
+                        // Use DEFAULTS_BY_LANG based on current I18n language
+                        const lang = I18n.currentLang;
+                        // Clone to avoid reference issues
+                        store.categories = JSON.parse(JSON.stringify(DEFAULTS_BY_LANG[lang] || DEFAULTS_BY_LANG.es));
                     }
 
-                    I18n.init();
-                    // Removed lang-selector legacy code
                     App.setReportRange(1);
                     document.getElementById('inp-date').value = new Date().toLocaleDateString('en-CA');
                     UI.renderCategoriesSelect(); UI.renderServicesConfig(); UI.renderCategoriesConfig(); UI.renderDeepFilters(); UI.renderSettings();
@@ -958,10 +996,8 @@
 
                     if (!saved) App.nav('help'); else App.nav('dashboard');
 
-                    // If we migrated (found in localStorage but not localForage), save now to persist in new DB
                     if (!await localforage.getItem('gastosApp_data') && localStorage.getItem('gastosApp_data')) {
                         await App.save();
-                        // Optional: localStorage.removeItem('gastosApp_data'); // Keep for safety for now
                     }
 
                 } catch (err) {
@@ -979,7 +1015,7 @@
                     buttonsStyling: false,
                     customClass: {
                         popup: 'rounded-2xl',
-                        cancelButton: 'w-full mt-2 theme-text-secondary font-bold py-3 rounded-xl border theme-border hover:bg-gray-100 transition'
+                        cancelButton: 'w-full mt-4 theme-text-secondary font-bold py-3 rounded-xl border theme-border hover:bg-gray-100 transition shadow-sm'
                     },
                     html: `
                         <button onclick="swal.clickConfirm(); setTimeout(() => App.adjustBalancePrompt(), 200)" class="w-full theme-bg-accent-light theme-text-primary font-bold py-3 rounded-xl mb-2 border theme-border hover:opacity-80">
@@ -997,12 +1033,13 @@
                     title: "Menu",
                     showCancelButton: true,
                     showConfirmButton: false,
-                    customClass: { popup: 'rounded-2xl' },
+                    cancelButtonText: I18n.t('cancel'),
+                    customClass: { popup: 'rounded-2xl', cancelButton: 'w-full mt-2 theme-text-secondary font-bold py-3 rounded-xl border theme-border hover:bg-gray-100 transition' },
                     html: `
                         <button onclick="swal.clickConfirm(); setTimeout(() => App.showAbout(), 200)" class="w-full theme-bg-accent-light theme-text-primary font-bold py-3 rounded-xl mb-2 border theme-border hover:opacity-80">
                             <i class="fas fa-info-circle mr-2"></i> ${I18n.t('menu_about')}
                         </button>
-                        <button onclick="swal.clickConfirm(); setTimeout(() => App.showGuide(), 200)" class="w-full theme-bg-card theme-text-secondary font-bold py-3 rounded-xl border theme-border hover:opacity-80">
+                        <button onclick="swal.clickConfirm(); setTimeout(() => App.showGuide(), 200)" class="w-full theme-bg-accent-light theme-text-secondary font-bold py-3 rounded-xl border theme-border hover:opacity-80">
                             <i class="fas fa-book mr-2"></i> ${I18n.t('menu_help')}
                         </button>
                     `
@@ -1038,9 +1075,9 @@
                 const { value: formValues } = await Swal.fire({
                     title: I18n.t('config_thresholds'),
                     html: `
-                        <label class="label-std text-xs text-left">Mínimo (Rojo)</label>
+                        <label class="label-std text-xs text-left">${I18n.t('lbl_min_red')}</label>
                         <input id="swal-min" class="swal2-input" type="number" value="${min}">
-                        <label class="label-std text-xs text-left">Meta (Verde)</label>
+                        <label class="label-std text-xs text-left">${I18n.t('lbl_goal_green')}</label>
                         <input id="swal-mid" class="swal2-input" type="number" value="${mid}">
                     `,
                     focusConfirm: false,
@@ -1068,7 +1105,7 @@
                 const { value: realBalStr } = await Swal.fire({
                     title: I18n.t('adjust_balance'),
                     input: 'number',
-                    inputLabel: `Saldo Sistema: $ ${currentBal.toLocaleString()}. Ingresa tu saldo real:`,
+                    inputLabel: I18n.t('adjust_bal_label', { bal: currentBal.toLocaleString() }),
                     inputPlaceholder: "Ej: 500000",
                     showCancelButton: true,
                     cancelButtonText: I18n.t('cancel'),
@@ -1145,10 +1182,32 @@
             },
 
             factoryReset: () => {
-                Swal.fire({ title: I18n.t('confirm_reset'), text: I18n.t('warn_reset'), icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: I18n.t('btn_reset') }).then(async (r) => {
+                Swal.fire({
+                    title: I18n.t('confirm_reset'),
+                    text: I18n.t('warn_reset'),
+                    icon: 'warning',
+                    showCancelButton: true,
+                    cancelButtonText: I18n.t('cancel'),
+                    confirmButtonColor: '#d33',
+                    confirmButtonText: I18n.t('btn_reset'),
+                    customClass: {
+                        popup: 'rounded-2xl',
+                        confirmButton: 'rounded-xl shadow-lg',
+                        cancelButton: 'rounded-xl border theme-border theme-text-secondary font-bold'
+                    }
+                }).then(async (r) => {
                     if (r.isConfirmed) {
+                        // Persist Language and Theme
+                        const lang = localStorage.getItem('gastosApp_lang');
+                        const theme = localStorage.getItem('gastosApp_theme');
+
                         await localforage.clear();
                         localStorage.clear();
+
+                        // Restore Language and Theme
+                        if (lang) localStorage.setItem('gastosApp_lang', lang);
+                        if (theme) localStorage.setItem('gastosApp_theme', theme);
+
                         location.reload();
                     }
                 });
@@ -1421,7 +1480,7 @@
                 document.getElementById('btn-save-tx').className = "w-full theme-bg-accent text-white font-bold py-3 rounded-lg shadow-lg hover:opacity-90 transition";
             },
 
-            deleteTransaction: (id) => { Swal.fire({ title: I18n.t('delete') + '?', icon: 'warning', showCancelButton: true }).then(r => { if (r.isConfirmed) { store.transactions = store.transactions.filter(t => t.id !== id); App.save(); } }); },
+            deleteTransaction: (id) => { Swal.fire({ title: I18n.t('delete') + '?', icon: 'warning', showCancelButton: true, cancelButtonText: I18n.t('cancel') }).then(r => { if (r.isConfirmed) { store.transactions = store.transactions.filter(t => t.id !== id); App.save(); } }); },
             setSort: (k) => { state.historySort.dir = (state.historySort.key === k && state.historySort.dir === 'asc') ? 'desc' : 'asc'; state.historySort.key = k; UI.renderHistory(); },
             editMovement: (id) => {
                 if (state.historyType === 'expense') App.editTransaction(id);
@@ -1442,7 +1501,15 @@
             },
             deleteSelected: () => {
                 if (state.selectedTx.size === 0) return;
-                Swal.fire({ title: I18n.t('confirm_delete_many', { n: state.selectedTx.size }), text: I18n.t('irreversible'), icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: I18n.t('delete') }).then((r) => {
+                Swal.fire({
+                    title: I18n.t('confirm_delete_many', { n: state.selectedTx.size }),
+                    text: I18n.t('irreversible'),
+                    icon: 'warning',
+                    showCancelButton: true,
+                    cancelButtonText: I18n.t('cancel'),
+                    confirmButtonColor: '#d33',
+                    confirmButtonText: I18n.t('delete')
+                }).then((r) => {
                     if (r.isConfirmed) {
                         if (state.historyType === 'expense') {
                             store.transactions = store.transactions.filter(t => !state.selectedTx.has(t.id));
@@ -1470,18 +1537,36 @@
                 const { value: v } = await Swal.fire({
                     title: eid ? I18n.t('common_edit') : I18n.t('common_new'),
                     html: `
-                        <label class="label-std text-xs">${I18n.t('lbl_service_group')}</label><select id="sn" class="swal2-input mb-2 bg-gray-50">${opts}</select>
-                        <label class="label-std text-xs">${I18n.t('lbl_frequency')}</label><select id="sf" class="swal2-input mb-2"><option value="MONTHLY" ${curr.frequency === 'MONTHLY' ? 'selected' : ''}>${I18n.t('freq_monthly')}</option><option value="BIMONTHLY_ODD" ${curr.frequency === 'BIMONTHLY_ODD' ? 'selected' : ''}>${I18n.t('freq_bimonthly_odd')}</option><option value="BIMONTHLY_EVEN" ${curr.frequency === 'BIMONTHLY_EVEN' ? 'selected' : ''}>${I18n.t('freq_bimonthly_even')}</option></select>
-                        <label class="label-std text-xs">${I18n.t('lbl_cost_type')}</label><select id="st" class="swal2-input mb-2"><option value="FIJO" ${curr.type === 'FIJO' ? 'selected' : ''}>${I18n.t('lbl_fixed')}</option><option value="VARIABLE" ${curr.type === 'VARIABLE' ? 'selected' : ''}>${I18n.t('lbl_variable')}</option></select>
-                        <label class="label-std text-xs">${I18n.t('lbl_cost')}</label><input id="sc" type="number" class="swal2-input mb-2" value="${curr.cost || ''}" placeholder="0">
-                        <label class="label-std text-xs">${I18n.t('lbl_cutoff')}</label><input id="sd" type="number" class="swal2-input" value="${curr.cutoffDay || ''}" placeholder="Ej: 15">
+                        <label class="label-std text-xs text-left">${I18n.t('name')}</label><input id="sn" class="swal2-input mb-2" value="${curr.name || ''}" placeholder="...">
+                        <label class="label-std text-xs text-left">${I18n.t('lbl_service_group')}</label><select id="srv-grp" class="swal2-input mb-2 bg-gray-50">${opts}</select>
+                        <label class="label-std text-xs text-left">${I18n.t('lbl_frequency')}</label><select id="sf" class="swal2-input mb-2"><option value="MONTHLY" ${curr.frequency === 'MONTHLY' ? 'selected' : ''}>${I18n.t('freq_monthly')}</option><option value="BIMONTHLY_ODD" ${curr.frequency === 'BIMONTHLY_ODD' ? 'selected' : ''}>${I18n.t('freq_bimonthly_odd')}</option><option value="BIMONTHLY_EVEN" ${curr.frequency === 'BIMONTHLY_EVEN' ? 'selected' : ''}>${I18n.t('freq_bimonthly_even')}</option></select>
+                        <label class="label-std text-xs text-left">${I18n.t('lbl_cost_type')}</label><select id="st" class="swal2-input mb-2"><option value="FIJO" ${curr.type === 'FIJO' ? 'selected' : ''}>${I18n.t('lbl_fixed')}</option><option value="VARIABLE" ${curr.type === 'VARIABLE' ? 'selected' : ''}>${I18n.t('lbl_variable')}</option></select>
+                        <label class="label-std text-xs text-left">${I18n.t('lbl_cost')}</label><input id="sc" type="number" class="swal2-input mb-2" value="${curr.cost || ''}" placeholder="0">
+                        <label class="label-std text-xs text-left">${I18n.t('lbl_cutoff')}</label><input id="sd" type="number" class="swal2-input" value="${curr.cutoffDay || ''}" placeholder="Ej: 15">
                     `,
                     focusConfirm: false, showCancelButton: true,
-                    preConfirm: () => [document.getElementById('sn').value, document.getElementById('st').value, document.getElementById('sc').value, document.getElementById('sd').value, document.getElementById('sf').value]
+                    cancelButtonText: I18n.t('cancel'),
+                    customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl shadow-lg', cancelButton: 'rounded-xl border theme-border theme-text-secondary font-bold' },
+                    preConfirm: () => [document.getElementById('sn').value, document.getElementById('st').value, document.getElementById('sc').value, document.getElementById('sd').value, document.getElementById('sf').value, document.getElementById('srv-grp').value]
                 });
 
                 if (v) {
-                    const [n, t, c, d, f] = v; if (!n) return;
+                    const [n, t, c, d, f, g] = v; if (!n) return;
+                    // Use picked group if name is generic? No, name is name. Group is just for linking? 
+                    // Original code used "sn" (Name) as the group name too? 
+                    // Original: store.recurringServices.find(s => s.name === t.group);
+                    // The "Group" linking relies on Service Name matching a Category Group Name.
+                    // So if user selects a Group from the list, we probably want to set the Service Name TO that group name?
+                    // User complained "New Service" modal. 
+                    // I see I changed the HTML inputs. Original: <select id="sn" ...> for Group? 
+                    // Wait, original line 1501: `lbl_service_group ... <select id="sn" ...` 
+                    // It seems "Name" WAS the "Group Selector". 
+                    // But if I want a custom name? 
+                    // The app logic seems to be: Service Name === Category Group Name. This allows `linkHistory` to work.
+                    // So `sn` IS the group.
+                    // I added `label-std text-xs text-left` for better styling too.
+                    // And I added `cancelButtonText`.
+
                     const o = { id: eid || 's' + Date.now(), name: n, type: t, cost: parseFloat(c) || 0, cutoffDay: parseInt(d), frequency: f, alertDays: 3 };
                     if (eid) { const i = store.recurringServices.findIndex(x => x.id === eid); store.recurringServices[i] = o; } else store.recurringServices.push(o);
                     App.save(); UI.renderServicesConfig();
@@ -1493,7 +1578,49 @@
                 create: () => { document.getElementById('edit-cat-id').value = ""; document.getElementById('edit-cat-name').value = ""; document.getElementById('edit-cat-groups-list').innerHTML = ""; UI.CategoryEditor.addGroupInput(''); App.nav('cat-editor'); },
                 edit: (id) => { const c = store.categories.find(x => x.id === id); if (!c) return; document.getElementById('edit-cat-id').value = c.id; document.getElementById('edit-cat-name').value = c.name; const ct = document.getElementById('edit-cat-groups-list'); ct.innerHTML = ""; (c.groups || []).forEach(g => UI.CategoryEditor.addGroupInput(g)); App.nav('cat-editor'); },
                 save: () => { const id = document.getElementById('edit-cat-id').value, n = document.getElementById('edit-cat-name').value, gs = Array.from(document.querySelectorAll('.cat-group-input')).map(i => i.value.trim()).filter(x => x); if (id) { const i = store.categories.findIndex(x => x.id === id); store.categories[i].name = n; store.categories[i].groups = gs; } else store.categories.push({ id: 'c' + Date.now(), name: n, groups: gs }); App.save(); App.nav('config'); },
-                delete: (id) => { if (store.transactions.some(t => t.categoryId === id)) return Swal.fire('Error', I18n.t('err_in_use'), 'error'); store.categories = store.categories.filter(c => c.id !== id); App.save(); }
+                delete: (id) => {
+                    if (store.transactions.some(t => t.categoryId === id)) return Swal.fire('Error', I18n.t('err_in_use'), 'error');
+                    store.categories = store.categories.filter(c => c.id !== id);
+                    App.save();
+                }
+            },
+
+            translateDefaults: (newLang) => {
+                const defaults = DEFAULTS_BY_LANG[newLang];
+                if (!defaults) return;
+
+                store.categories.forEach(cat => {
+                    // Find corresponding default category by ID (e.g., 'c1')
+                    const defCat = defaults.find(d => d.id === cat.id);
+                    if (defCat) {
+                        // Update Name
+                        cat.name = defCat.name;
+
+                        // Update Groups (Attempt to map)
+                        // We need to look up the OLD group names and see if they match any known default string
+                        // It's expensive to map every possible string. 
+                        // Simpler: iterate current groups, if they match a known string in ANY lang, replace with New Lang.
+
+                        cat.groups = cat.groups.map(g => {
+                            // check if this group 'g' exists in any language for THIS category ID
+                            for (const l in DEFAULTS_BY_LANG) {
+                                const lCat = DEFAULTS_BY_LANG[l].find(c => c.id === cat.id);
+                                if (lCat) {
+                                    const idx = lCat.groups.indexOf(g);
+                                    if (idx !== -1) {
+                                        // Found it! It's the Nth group in language 'l'.
+                                        // Map to the Nth group in 'newLang'.
+                                        return defCat.groups[idx] || g; // Fallback if index missing (shouldn't happen)
+                                    }
+                                }
+                            }
+                            return g; // Custom group, keep as is
+                        });
+                    }
+                });
+                App.save();
+                UI.renderCategoriesConfig();
+                UI.renderCategoriesSelect();
             },
 
             Maintenance: {
@@ -2007,19 +2134,43 @@
                                 });
                             } else {
                                 let catId = catMap[catNombre];
-                                if (!catId) { const fallback = store.categories.find(c => c.name === 'Varios' || c.name === 'Otros'); catId = fallback ? fallback.id : store.categories[0].id; }
-                                store.transactions.push({
-                                    id: crypto.randomUUID(),
-                                    date: dateISO,
-                                    categoryId: catId,
-                                    category: catNombre,
-                                    group: grupo,
-                                    description: desc.replace(/"/g, ''),
-                                    quantity: cleanNum(cant) || 1,
-                                    unitValue: cleanNum(unit) || cleanNum(total),
-                                    total: cleanNum(total),
-                                    serviceId: ""
-                                });
+
+                                // Auto-create Category if missing
+                                if (!catId && catNombre) {
+                                    const newCatId = 'c' + Date.now() + Math.floor(Math.random() * 1000);
+                                    store.categories.push({ id: newCatId, name: catNombre, groups: [] });
+                                    catMap[catNombre] = newCatId;
+                                    catId = newCatId;
+                                }
+
+                                // Auto-create Group if missing in that Category
+                                if (catId && grupo) {
+                                    const catObj = store.categories.find(c => c.id === catId);
+                                    if (catObj && !catObj.groups.includes(grupo)) {
+                                        catObj.groups.push(grupo);
+                                    }
+                                }
+
+                                if (!catId) {
+                                    // Extreme fallback if catNombre was empty
+                                    const fallback = store.categories.find(c => c.name === 'Varios' || c.name === 'Otros');
+                                    catId = fallback ? fallback.id : (store.categories[0] ? store.categories[0].id : null);
+                                }
+
+                                if (catId) {
+                                    store.transactions.push({
+                                        id: crypto.randomUUID(),
+                                        date: dateISO,
+                                        categoryId: catId,
+                                        category: catNombre,
+                                        group: grupo,
+                                        description: desc.replace(/"/g, ''),
+                                        quantity: cleanNum(cant) || 1,
+                                        unitValue: cleanNum(unit) || cleanNum(total),
+                                        total: cleanNum(total),
+                                        serviceId: ""
+                                    });
+                                }
                             }
                             count++;
                         }
