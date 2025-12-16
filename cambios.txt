@@ -1,0 +1,25 @@
+Cambios realizados a la app control-de-gastos-personales, con el fin de agregar la opción de ingresos.
+=================================
+Quiero contemplar la ocpión de agregar un módulo de ingresos. La app debe capturar: Fecha, Monto y Descripción para cada ingreso (dime si consdieras necesarios otros campos)
+
+Esa información se debe persisitir. La app ya maneja persistencian con localForage e indexDB, si no estoy mal.
+
+La app debe mostrar, en la ventana Inicio, justo encima de la tarjeta de gastos, una tarjeta con información del saldo (Total ingresos - total gastos). No se si se deba hacer un cierre de período, escucho tus sugerencias.
+
+El saldo deberá mostrar color verde, naranja o rojo, según el saldo disponilbe. Para estos valores se definirá un rango, configurable por el usuario. Por ejmplo: si el saldo es superior a 1000000 verde, entre 500000 y 999999 naranja y si es menor de 500000, rojo. Reitero, estos valores deben ser configurables.
+
+Revisa detalladamente mi idea y dime si te parece lógica y viable. Sugiere todos los ajustes que consdieres válidos y creemos una solución conjunta.
+
+Recuerda el protocolo de trabajo:
+-prompt
+-análisis
+-propuesta
+-revisión y ajustes hasta aprobación mía
+-aprobación
+-instrucción procede para que generes código, no antes.
+==========================
+ok, ya está, pero  hagamos algunos cambios.
+1. En Inicio:
+-Agregar el selector de idioma en la parte superior de la app, extremo superior derecho, encima de la tarjeta de balance. Impleméntala igual que en la app Vitalis, la bandera (Colombia-español, USA-inglés, Brasil-portugués, etc.), como un conmutador cíclico.
+2. Los ingresos también deben poder visualizarse, editarse y eliminarse. Sugiere la forma de hacerlo.
+3. Traslada el botón "Ajustar balance" a la izquierda del botón de idioma, en la misma fila. Este botón debe agrupar la funcionalidad de "Ajustar balance" y "orden del balance"

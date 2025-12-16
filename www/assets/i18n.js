@@ -1,15 +1,13 @@
 const translations = {
     es: {
-        app_title: "Mis Gastos",
+        app_title: "SmartFinance",
         backup: "Backup",
-        // Dashboard
         total_expense_month: "Gasto Total (Mes Actual)",
         transactions_count: "transacciones",
         attn_required: "Atención Requerida",
         touch_to_pay: "Toca una alerta para registrar el pago.",
         adv_reports: "Reportes Avanzados",
         config: "Configurar",
-        // Add Form
         reg_movement: "Registrar Movimiento",
         discard_back: "Descartar / Volver",
         date: "Fecha",
@@ -31,7 +29,6 @@ const translations = {
         saved: "Guardado",
         error_missing_data: "Faltan datos obligatorios",
         no_desc: "Sin descripción",
-        // History
         history: "Historial",
         export: "Exportar",
         delete: "Borrar",
@@ -41,7 +38,6 @@ const translations = {
         sort_group: "Grupo",
         confirm_delete_many: "¿Borrar {n}?",
         irreversible: "Irreversible",
-        // Reports
         smart_reports: "Reportes Inteligentes",
         from: "Desde",
         to: "Hasta",
@@ -60,7 +56,6 @@ const translations = {
         chart_doughnut: "Torta (Total)",
         total_period: "Total Periodo:",
         avg_monthly: "Promedio Mensual:",
-        // Config
         configuration: "Configuración",
         cats_groups: "Categorías y Grupos",
         new_cat: "+ Nueva Categoría",
@@ -76,7 +71,6 @@ const translations = {
         warn_reset: "Se borrarán todos los datos. Irreversible.",
         btn_reset: "Sí, borrar todo",
         lang_select: "Idioma / Language",
-        // Help
         help_guide: "Guía de Uso",
         welcome_title: "Bienvenido a Mis Gastos",
         welcome_text: "Esta aplicación permite llevar el control detallado de tus finanzas personales, funcionando 100% offline.",
@@ -88,15 +82,12 @@ const translations = {
         help_sys_text: "El sistema monitorea tus servicios y te notifica 3 días antes del corte.",
         help_data_title: "Respaldo de Datos",
         help_data_text: "Tus datos son privados y viven en este dispositivo. Puedes exportar e importar backups.",
-        // Editors
         edit_cat: "Editar Categoría",
         name: "Nombre",
         add_group: "+ Grupo",
         cancel: "Cancelar",
-        // Nav
         nav_home: "Inicio",
         nav_history: "Historial",
-        // Dynamic
         cat_housing: "Vivienda",
         cat_services: "Servicios",
         cat_food: "Alimentos",
@@ -119,7 +110,6 @@ const translations = {
         notice: "Aviso",
         common_edit: "Editar",
         common_new: "Nuevo",
-        // Notifs & Backup
         notif_title_payment: "Recordatorio de Pago",
         notif_body_days: "El servicio {n} vence en {d} días.",
         notif_body_today: "El servicio {n} vence HOY.",
@@ -147,10 +137,36 @@ const translations = {
         csv_type_expense: "Gasto",
         lbl_vence_day: "Vence día {n}",
         lbl_vencido: "Vencido",
-        lbl_pay: "Pagar"
+        lbl_pay: "Pagar",
+        balance_options: "Opciones de Saldo",
+        config_thresholds: "Configurar Semáforo",
+        adjust_balance: "Ajustar Saldo",
+        config_thresholds: "Configurar Semáforo",
+        adjust_balance: "Ajustar Saldo",
+        lbl_h_expenses: "GASTOS",
+        lbl_h_incomes: "INGRESOS",
+        lbl_h_expenses: "GASTOS",
+        lbl_h_incomes: "INGRESOS",
+        avail_balance: "Saldo Disponible",
+        tab_expense: "Gasto",
+        tab_income: "Ingreso",
+        tab_income: "Ingreso",
+        total_income: "Monto Ingreso",
+        menu_help: "Ayuda / Guía",
+        menu_about: "Acerca de",
+        about_title: "Acerca de SmartFinance",
+        copyright: "Copyright GabHoX ghdiez.01@gmail.com - 2025 todos los derechos reservados.",
+        btn_close: "Cerrar",
+        data_management: "Gestión de Datos",
+        lbl_import: "Importar",
+        lbl_export: "Exportar",
+        help_cats_title: "Categorías y Grupos",
+        help_cats_text: "Clasifica tus gastos. Puedes crear nuevas categorías o agregar grupos a las existentes.",
+        help_backup_title: "Respaldo y Transferencia",
+        help_backup_text: "Exporta tus datos para guardarlos o transferirlos a otro dispositivo."
     },
     en: {
-        app_title: "My Expenses",
+        app_title: "SmartFinance",
         backup: "Backup",
         total_expense_month: "Total Expense (Current Month)",
         transactions_count: "transactions",
@@ -253,6 +269,23 @@ const translations = {
         lbl_frequency: "Frequency",
         lbl_cost_type: "Cost Type",
         lbl_fixed: "Fixed",
+        avail_balance: "Available Balance",
+        tab_expense: "Expense",
+        tab_income: "Income",
+        tab_income: "Income",
+        total_income: "Income Amount",
+        menu_help: "Help / Guide",
+        menu_about: "About",
+        about_title: "About SmartFinance",
+        copyright: "Copyright GabHoX ghdiez.01@gmail.com - 2025 all rights reserved.",
+        btn_close: "Close",
+        data_management: "Data Management",
+        lbl_import: "Import",
+        lbl_export: "Export",
+        help_cats_title: "Categories & Groups",
+        help_cats_text: "Classify your expenses. Create new categories or add groups to existing ones.",
+        help_backup_title: "Backup & Transfer",
+        help_backup_text: "Export your data to save it or transfer to another device.",
         lbl_variable: "Variable",
         lbl_cost: "Cost ($)",
         lbl_cutoff: "Cutoff Day",
@@ -287,10 +320,15 @@ const translations = {
         csv_type_expense: "Expense",
         lbl_vence_day: "Due day {n}",
         lbl_vencido: "Overdue",
-        lbl_pay: "Pay"
+        lbl_pay: "Pay",
+        balance_options: "Balance Options",
+        config_thresholds: "Config Thresholds",
+        adjust_balance: "Adjust Balance",
+        lbl_h_expenses: "EXPENSES",
+        lbl_h_incomes: "INCOME"
     },
     pt: {
-        app_title: "Minhas Despesas",
+        app_title: "SmartFinance",
         backup: "Backup",
         total_expense_month: "Despesa Total (Mês Atual)",
         transactions_count: "transações",
@@ -427,7 +465,28 @@ const translations = {
         csv_type_expense: "Despesa",
         lbl_vence_day: "Vence dia {n}",
         lbl_vencido: "Vencido",
-        lbl_pay: "Pagar"
+        lbl_pay: "Pagar",
+        balance_options: "Opções de Saldo",
+        config_thresholds: "Configurar Semáforo",
+        adjust_balance: "Ajustar Saldo",
+        lbl_h_expenses: "DESPESAS",
+        lbl_h_incomes: "RECEITAS",
+        avail_balance: "Saldo Disponível",
+        tab_expense: "Despesa",
+        tab_income: "Receita",
+        total_income: "Valor da Receita",
+        menu_help: "Ajuda / Guia",
+        menu_about: "Sobre",
+        about_title: "Sobre SmartFinance",
+        copyright: "Copyright GabHoX ghdiez.01@gmail.com - 2025 todos os direitos reservados.",
+        btn_close: "Fechar",
+        data_management: "Gestão de Dados",
+        lbl_import: "Importar",
+        lbl_export: "Exportar",
+        help_cats_title: "Categorias e Grupos",
+        help_cats_text: "Classifique suas despesas. Crie novas categorias ou adicione grupos às existentes.",
+        help_backup_title: "Backup e Transferência",
+        help_backup_text: "Exporte seus dados para salvá-los ou transferi-los para outro dispositivo."
     }
 };
 
@@ -452,21 +511,39 @@ const I18n = {
         return str;
     },
 
+    toggleLanguage: () => {
+        const langs = ['es', 'en', 'pt'];
+        const next = langs[(langs.indexOf(I18n.currentLang) + 1) % langs.length];
+        I18n.setLanguage(next);
+    },
+
     setLanguage: (lang) => {
         if (!translations[lang]) return;
         I18n.currentLang = lang;
         localStorage.setItem('gastosApp_lang', lang);
         I18n.updatePage();
-        // Specific updates for dynamic content that needs re-rendering
-        UI.renderCategoriesSelect(); // To translate categories if they are default ones
-        UI.renderServicesConfig();
-        UI.renderHistory();
-        UI.updateDashboard();
-        UI.renderReports();
-        UI.renderCategoriesConfig(); // Cat config naming
+
+        // Update Flag
+        const flags = { 'es': 'assets/flags/co.png', 'en': 'assets/flags/us.png', 'pt': 'assets/flags/br.png' };
+        const btn = document.getElementById('btn-lang-toggle');
+        if (btn) btn.innerHTML = `<img src="${flags[lang]}" class="w-6 h-4 rounded shadow-sm border border-white">`;
+
+        if (window.UI) {
+            UI.renderCategoriesSelect();
+            UI.renderServicesConfig();
+            UI.renderHistory();
+            UI.updateDashboard();
+            UI.renderReports();
+            UI.renderCategoriesConfig();
+        }
     },
 
     updatePage: () => {
+        // Update Flag on Init
+        const flags = { 'es': 'assets/flags/co.png', 'en': 'assets/flags/us.png', 'pt': 'assets/flags/br.png' };
+        const btn = document.getElementById('btn-lang-toggle');
+        if (btn && flags[I18n.currentLang]) btn.innerHTML = `<img src="${flags[I18n.currentLang]}" class="w-6 h-4 rounded shadow-sm border border-white">`;
+
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
             const placeholder = el.getAttribute('data-i18n-placeholder');

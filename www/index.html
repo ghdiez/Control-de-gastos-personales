@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mis Gastos</title>
+    <title>SmartFinance</title>
 
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="assets/icon.png">
@@ -15,7 +15,15 @@
     <script src="assets/chart.js"></script>
     <script src="assets/sweetalert2.js"></script>
     <script src="assets/i18n.js"></script>
-
+    <script src="assets/localforage.min.js"></script>
+    <script>
+        // Suppress Tailwind CDN warning locally
+        const origConsoleWarn = console.warn;
+        console.warn = (...args) => {
+            if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
+            origConsoleWarn(...args);
+        };
+    </script>
     <style>
         body {
             font-family: 'Segoe UI', sans-serif;
@@ -97,139 +105,446 @@
             }
         }
     </style>
+    <style>
+        /* Theme Variables */
+        :root {
+            /* Green (Default) */
+            --bg-body: #f9fafb;
+            /* Lighter gray/white for body */
+            --bg-primary: rgb(232, 245, 233);
+            /* user-provided light green */
+            --bg-secondary: #ffffff;
+            --bg-header: rgb(76, 175, 80);
+            /* user-provided primary green */
+            --text-primary: rgb(27, 94, 32);
+            /* Darker green for text readability against light bg */
+            --text-secondary: rgb(51, 105, 30);
+            /* lime-800 */
+            --text-secondary: #365314;
+            /* lime-950 */
+            --text-muted: #6b7280;
+            /* gray-500 */
+            --accent-color: rgb(76, 175, 80);
+            /* user-provided primary green */
+            --bg-accent-light: rgb(232, 245, 233);
+            /* user-provided light green */
+            --text-accent-dark: rgb(76, 175, 80);
+            --border-color: rgb(165, 214, 167);
+            /* green-200 equivalent */
+            --card-bg: #ffffff;
+            --input-bg: #f9fafb;
+            --nav-active: rgb(76, 175, 80);
+            --nav-inactive: #9ca3af;
+        }
+
+        [data-theme='blue'] {
+            --bg-primary: rgb(227, 242, 253);
+            /* user-provided light blue */
+            --bg-secondary: #ffffff;
+            --bg-header: rgb(30, 136, 229);
+            /* user-provided primary blue */
+            --text-primary: rgb(13, 71, 161);
+            /* blue-900 */
+            --text-secondary: #1e3a8a;
+            /* blue-900 */
+            --text-muted: #6b7280;
+            --accent-color: rgb(30, 136, 229);
+            /* user-provided primary blue */
+            --bg-accent-light: rgb(227, 242, 253);
+            /* user-provided light blue */
+            --text-accent-dark: rgb(30, 136, 229);
+            --border-color: rgb(144, 202, 249);
+            /* blue-200 */
+            --nav-active: rgb(30, 136, 229);
+        }
+
+        [data-theme='contrast'] {
+            --bg-body: #000000;
+            --bg-primary: #000000;
+            --bg-secondary: #121212;
+            --bg-header: #000000;
+            --text-primary: rgb(255, 215, 0);
+            /* Gold */
+            --text-secondary: #ffffff;
+            --text-muted: #dddddd;
+            --accent-color: rgb(255, 215, 0);
+            --bg-accent-light: #333333;
+            --text-accent-dark: rgb(255, 215, 0);
+            --border-color: rgb(255, 215, 0);
+            --card-bg: #1f1f1f;
+            --input-bg: #333333;
+            --nav-active: rgb(255, 215, 0);
+            --nav-inactive: #888888;
+            color: #ffffff;
+        }
+
+        /* Utility classes for dynamic usage */
+        .theme-bg-header {
+            background-color: var(--bg-header) !important;
+        }
+
+        .theme-text-primary {
+            color: var(--text-primary) !important;
+        }
+
+        .theme-text-secondary {
+            color: var(--text-secondary) !important;
+        }
+
+        .theme-text-muted {
+            color: var(--text-muted) !important;
+        }
+
+        .theme-text-accent {
+            color: var(--accent-color) !important;
+        }
+
+        .theme-bg-accent {
+            background-color: var(--accent-color) !important;
+        }
+
+        .theme-bg-accent-light {
+            background-color: var(--bg-accent-light) !important;
+        }
+
+        .theme-text-accent-dark {
+            color: var(--text-accent-dark) !important;
+        }
+
+        .theme-border {
+            border-color: var(--border-color) !important;
+        }
+
+        .theme-bg-card {
+            background-color: var(--card-bg) !important;
+        }
+
+        .theme-nav-active {
+            color: var(--nav-active) !important;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-secondary);
+        }
+
+        [data-theme='contrast'] .bg-white {
+            background-color: var(--card-bg) !important;
+            color: #fff;
+            border: 1px solid #444;
+        }
+
+        [data-theme='contrast'] .text-gray-500 {
+            color: #aaa !important;
+        }
+
+        [data-theme='contrast'] .text-gray-800 {
+            color: #fff !important;
+        }
+
+        [data-theme='contrast'] .text-gray-700 {
+            color: #ddd !important;
+        }
+
+        [data-theme='contrast'] .bg-blue-600 {
+            background-color: #000 !important;
+            border: 2px solid #ffff00;
+        }
+
+        [data-theme='contrast'] .bg-gray-50 {
+            background-color: #333 !important;
+            border-color: #555 !important;
+        }
+
+        [data-theme='contrast'] .border-gray-200 {
+            border-color: #555 !important;
+        }
+
+        [data-theme='contrast'] .text-blue-600 {
+            color: #ffff00 !important;
+        }
+
+        [data-theme='contrast'] .text-blue-500 {
+            color: #ffff00 !important;
+        }
+
+        [data-theme='contrast'] .bg-blue-50 {
+            background-color: #222 !important;
+            border-color: #444;
+        }
+
+        [data-theme='contrast'] .bg-green-50 {
+            background-color: #222 !important;
+            border-color: #444;
+        }
+
+        [data-theme='contrast'] .bg-yellow-100 {
+            background-color: #333 !important;
+            color: #ffff00 !important;
+        }
+
+        [data-theme='contrast'] .text-yellow-700 {
+            color: #ffff00 !important;
+        }
+
+        /* Navigation Active State overrides */
+        .nav-btn.active-nav {
+            color: var(--nav-active);
+        }
+
+        .nav-btn.inactive-nav {
+            color: var(--nav-inactive);
+        }
+
+        /* SweetAlert Theming */
+        div:where(.swal2-container) div:where(.swal2-popup) {
+            background: var(--card-bg);
+            color: var(--text-secondary);
+            border: 2px solid var(--border-color);
+        }
+
+        div:where(.swal2-container) .swal2-title {
+            color: var(--text-primary);
+        }
+
+        div:where(.swal2-container) .swal2-html-container {
+            color: var(--text-muted);
+        }
+
+        div:where(.swal2-container) button.swal2-confirm {
+            background-color: var(--accent-color) !important;
+            color: #fff;
+        }
+    </style>
 </head>
 
 <body>
 
-    <header class="bg-blue-700 text-white p-4 shadow-lg fixed top-0 w-full z-40 flex justify-between items-center">
-        <h1 class="text-lg font-bold" data-i18n="app_title"><i class="fas fa-wallet mr-2"></i>Mis Gastos</h1>
-        <div class="flex gap-2">
-            <button onclick="App.nav('help')"
-                class="text-xs bg-blue-800 hover:bg-blue-600 p-2 rounded transition border border-blue-500">
-                <i class="fas fa-info-circle"></i>
-            </button>
-            <button onclick="BackupManager.exportJSON()"
-                class="text-xs bg-blue-800 hover:bg-blue-600 p-2 rounded transition border border-blue-500">
-                <i class="fas fa-save mr-1"></i> <span data-i18n="backup">Backup</span>
-            </button>
+    <header class="theme-bg-header transition-colors duration-500 text-white p-4 shadow-md fixed top-0 w-full z-10">
+        <div class="flex justify-between items-center max-w-4xl mx-auto">
+            <h1 class="text-xl font-bold tracking-tight"><i class="fas fa-wallet mr-2"></i> <span
+                    data-i18n="app_title">GastosApp</span></h1>
+            <div class="flex items-center gap-6">
+                <button onclick="App.showBalanceMenu()" class="text-white hover:text-gray-200 transition">
+                    <i class="fas fa-scale-balanced text-3xl"></i>
+                </button>
+                <button onclick="I18n.toggleLanguage()" class="hover:scale-110 transition" id="btn-lang-toggle">
+                    <img src="assets/flags/co.png" class="w-8 h-6 rounded shadow-sm border border-white">
+                </button>
+                <button onclick="UI.ThemeManager.toggle()" class="text-white hover:text-gray-200 transition">
+                    <i class="fas fa-palette text-3xl"></i>
+                </button>
+                <button onclick="App.showHelpMenu()" class="text-white hover:text-gray-200 transition">
+                    <i class="fas fa-circle-question text-3xl"></i>
+                </button>
+            </div>
         </div>
     </header>
-    <div class="h-16"></div>
+    <div class="h-20"></div>
 
     <section id="view-dashboard" class="p-4 fade-in">
-        <div class="bg-white rounded-xl shadow-md p-5 mb-4 relative overflow-hidden">
-            <div class="absolute top-0 right-0 bg-blue-100 w-16 h-16 rounded-bl-full -mr-8 -mt-8"></div>
-            <h2 class="text-gray-500 text-xs font-bold uppercase tracking-wider" data-i18n="total_expense_month">Gasto
-                Total (Mes Actual)</h2>
-            <p class="text-4xl font-bold text-gray-800 mt-2" id="dash-total">$ 0</p>
-            <p class="text-xs text-gray-400 mt-1"><span id="dash-count">0</span> <span
-                    data-i18n="transactions_count">transacciones</span></p>
+        <!-- Balance Card -->
+        <div
+            class="theme-bg-card rounded-2xl shadow-lg p-6 mb-6 relative overflow-hidden transition-colors duration-300 border theme-border">
+            <div
+                class="absolute top-0 left-0 theme-bg-accent-light w-32 h-32 rounded-br-full -ml-10 -mt-10 z-0 opacity-50">
+            </div>
+            <div class="relative z-10">
+                <h2 class="theme-text-muted text-xs font-bold uppercase tracking-wider" data-i18n="avail_balance">Saldo
+                    Disponible</h2>
+                <p class="text-5xl font-bold mt-2 transition-colors duration-500 theme-text-primary" id="dash-balance">$
+                    0</p>
+                <div class="flex items-center gap-4 mt-3 text-xs theme-text-secondary font-bold uppercase opacity-80">
+                    <span><i class="fas fa-arrow-up text-green-500"></i> <span id="dash-total-inc">$ 0</span></span>
+                    <span class="opacity-30">|</span>
+                    <span><i class="fas fa-arrow-down text-red-500"></i> <span id="dash-total-exp">$ 0</span></span>
+                </div>
+            </div>
         </div>
 
-        <div id="dash-alerts-container" class="mb-4 hidden-section">
-            <h3 class="text-gray-700 font-bold mb-2 text-sm"><i class="fas fa-exclamation-circle text-red-500"></i>
-                <span data-i18n="attn_required">Atención Requerida</span>
-            </h3>
-            <p class="text-[10px] text-gray-400 mb-2 italic" data-i18n="touch_to_pay">Toca una alerta para registrar el
-                pago.</p>
+        <!-- Month Stats -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="theme-bg-card p-4 rounded-2xl shadow-sm border theme-border text-center">
+                <p class="text-[10px] uppercase font-bold theme-text-muted" data-i18n="month_total">Gasto Mes</p>
+                <p class="text-lg font-bold theme-text-primary mt-1" id="dash-total">$ 0</p>
+            </div>
+            <div class="theme-bg-card p-4 rounded-2xl shadow-sm border theme-border text-center">
+                <p class="text-[10px] uppercase font-bold theme-text-muted" data-i18n="month_tx">Movimientos</p>
+                <p class="text-lg font-bold theme-text-primary mt-1" id="dash-count">0</p>
+            </div>
+        </div>
+
+        <!-- Alerts -->
+        <div id="dash-alerts-container" class="hidden-section mb-6">
+            <h3 class="font-bold theme-text-secondary text-sm mb-2" data-i18n="alerts">Alertas</h3>
             <div id="alerts-list" class="space-y-2"></div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
-            <div onclick="App.nav('reportes')"
-                class="bg-white p-4 rounded-lg shadow text-center active:bg-gray-50 cursor-pointer">
-                <i class="fas fa-chart-column text-purple-500 text-2xl mb-2"></i>
-                <p class="text-xs font-bold text-gray-600" data-i18n="adv_reports">Reportes Avanzados</p>
+        <!-- Recent Activity -->
+        <div class="mb-6">
+            <div class="flex justify-between items-center mb-3 px-1">
+                <h3 class="font-bold theme-text-secondary text-sm" data-i18n="recent_activity">Actividad Reciente</h3>
+                <button onclick="App.nav('history')" class="text-xs theme-text-accent font-bold hover:underline"
+                    data-i18n="view_all">Ver todo</button>
             </div>
-            <div onclick="App.nav('config')"
-                class="bg-white p-4 rounded-lg shadow text-center active:bg-gray-50 cursor-pointer">
-                <i class="fas fa-cogs text-gray-500 text-2xl mb-2"></i>
-                <p class="text-xs font-bold text-gray-600" data-i18n="config">Configurar</p>
+            <div id="dash-history-list" class="space-y-3">
+                <!-- Dynamically populated -->
             </div>
         </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-24">
+            <div onclick="App.nav('reportes')"
+                class="theme-bg-card p-4 rounded-xl shadow-sm border theme-border flex flex-col items-center justify-center cursor-pointer hover:bg-opacity-80 transition py-6">
+                <div
+                    class="theme-bg-accent-light w-10 h-10 rounded-full flex items-center justify-center mb-2 text-blue-600">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+                <span class="text-xs font-bold theme-text-primary" data-i18n="reports">Reportes</span>
+            </div>
+            <div onclick="App.nav('config')"
+                class="theme-bg-card p-4 rounded-xl shadow-sm border theme-border flex flex-col items-center justify-center cursor-pointer hover:bg-opacity-80 transition py-6">
+                <div
+                    class="theme-bg-accent-light w-10 h-10 rounded-full flex items-center justify-center mb-2 text-gray-600">
+                    <i class="fas fa-cogs"></i>
+                </div>
+                <span class="text-xs font-bold theme-text-primary" data-i18n="config">Configurar</span>
+            </div>
+        </div>
+
     </section>
 
-    <section id="view-add" class="p-4 hidden-section fade-in">
-        <div class="bg-white rounded-xl shadow-lg p-5">
-            <div class="flex justify-between items-center border-b pb-2 mb-4">
-                <h2 class="text-lg font-bold text-gray-800" id="form-title" data-i18n="reg_movement">Registrar
-                    Movimiento</h2>
-                <button type="button" onclick="App.discardForm()" class="text-xs text-gray-500 underline"
-                    data-i18n="discard_back">Descartar /
-                    Volver</button>
-            </div>
+    <section id="view-add" class="p-4 hidden-section bg-gray-50 min-h-screen pb-20 fade-in"
+        style="background-color: var(--bg-body);">
+        <div class="mb-6 text-center pt-10">
+            <h2 class="text-2xl font-bold theme-text-primary" id="form-title" data-i18n="reg_movement">Registrar
+                Movimiento</h2>
+            <p class="theme-text-secondary text-xs mt-1" data-i18n="desc_placeholder">Detalles del gasto</p>
+        </div>
 
-            <form id="form-add">
+        <!-- Custom Tabs -->
+        <div class="flex p-1 rounded-xl theme-bg-card border theme-border mb-6 shadow-sm">
+            <button onclick="UI.toggleAddTab('expense')" id="tab-add-expense"
+                class="flex-1 py-3 text-sm font-bold rounded-lg transition-all duration-300 theme-bg-accent text-white shadow-md">
+                <i class="fas fa-arrow-down mr-2"></i> <span data-i18n="tab_expense">Gasto</span>
+            </button>
+            <button onclick="UI.toggleAddTab('income')" id="tab-add-income"
+                class="flex-1 py-3 text-sm font-bold rounded-lg transition-all duration-300 theme-text-secondary hover:bg-gray-100">
+                <i class="fas fa-arrow-up mr-2"></i> <span data-i18n="tab_income">Ingreso</span>
+            </button>
+        </div>
+
+        <div class="theme-bg-card p-6 rounded-2xl shadow-lg border theme-border">
+            <form id="form-add" onsubmit="event.preventDefault(); App.saveTx();">
                 <input type="hidden" id="inp-edit-id">
-                <div class="mb-3">
-                    <label class="label-std" data-i18n="date">Fecha</label>
-                    <input type="date" id="inp-date" class="input-std">
-                </div>
-                <div class="mb-3">
-                    <label class="label-std" data-i18n="category">Categoría</label>
-                    <select id="inp-cat" class="input-std" onchange="UI.updateGroupsAndServices()">
-                        <option value="" data-i18n="select_option">Seleccione...</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="label-std" data-i18n="group_subcat">Grupo / Subcategoría</label>
-                    <select id="inp-group" class="input-std" onchange="UI.onGroupChange()">
-                        <option value="" data-i18n="none">---</option>
-                    </select>
+                <input type="hidden" id="inp-type" value="expense">
+
+                <div class="mb-5">
+                    <label class="block text-xs font-bold theme-text-muted uppercase tracking-wider mb-2"
+                        data-i18n="date">Fecha</label>
+                    <input type="date" id="inp-date"
+                        class="w-full theme-bg-accent-light border theme-border rounded-xl p-3 theme-text-primary font-bold outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-400 transition"
+                        required>
                 </div>
 
-                <div id="box-recurring-select"
-                    class="mb-3 hidden-section bg-yellow-50 p-2 rounded border border-yellow-200">
-                    <label class="label-std text-yellow-800 text-xs"><i class="fas fa-bolt"></i> <span
-                            data-i18n="linked_service">Vinculado a
-                            Servicio:</span></label>
-                    <select id="inp-service-link" class="input-std bg-white text-sm" onchange="UI.autofillService()">
-                        <option value="" data-i18n="no_service">(Ninguno)</option>
-                    </select>
+                <div id="form-expense-section">
+                    <div class="mb-5">
+                        <label class="block text-xs font-bold theme-text-muted uppercase tracking-wider mb-2"
+                            data-i18n="category">Categoría</label>
+                        <select id="inp-cat" onchange="UI.renderGroupsSelect()"
+                            class="w-full theme-bg-accent-light border theme-border rounded-xl p-3 theme-text-primary font-bold outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-400 transition"
+                            required></select>
+                    </div>
+
+                    <div class="mb-5">
+                        <label class="block text-xs font-bold theme-text-muted uppercase tracking-wider mb-2"
+                            data-i18n="group_subcat">Grupo / Subcategoría</label>
+                        <select id="inp-group"
+                            class="w-full theme-bg-accent-light border theme-border rounded-xl p-3 theme-text-primary font-bold outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-400 transition"
+                            required>
+                            <option value="">---</option>
+                        </select>
+                        <p id="lbl-linked-service" class="text-[10px] theme-text-accent mt-1 hidden"><i
+                                class="fas fa-link"></i> <span data-i18n="linked_service">Vinculado a Servicio:</span>
+                            <span id="txt-linked-service" class="font-bold"></span>
+                        </p>
+                    </div>
+
+                    <div id="box-recurring-select"
+                        class="mb-5 hidden-section theme-bg-accent-light p-3 rounded-lg border theme-border">
+                        <label class="block text-xs font-bold theme-text-primary uppercase tracking-wider mb-2"
+                            data-i18n="link_service">Vincular a Servicio (Opcional)</label>
+                        <select id="inp-service-link"
+                            class="w-full theme-bg-card border theme-border rounded-xl p-2 theme-text-primary font-bold outline-none text-sm"></select>
+                    </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="label-std" data-i18n="description">Descripción</label>
-                    <input type="text" id="inp-desc" placeholder="Detalle del gasto"
-                        data-i18n-placeholder="desc_placeholder" class="input-std">
+                <div class="mb-5">
+                    <label class="block text-xs font-bold theme-text-muted uppercase tracking-wider mb-2"
+                        data-i18n="description">Descripción</label>
+                    <input type="text" id="inp-desc"
+                        class="w-full theme-bg-accent-light border theme-border rounded-xl p-3 theme-text-primary font-bold outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-400 transition"
+                        placeholder="...">
                 </div>
-                <div class="flex justify-between items-center mb-3 bg-gray-50 p-2 rounded">
-                    <span class="text-xs font-bold text-gray-600" data-i18n="detailed_mode">Modo Detallado (Cant *
-                        Unit)</span>
-                    <input type="checkbox" id="toggle-detailed" class="w-5 h-5 text-blue-600"
-                        onchange="UI.toggleDetailedMode()">
+
+                <!-- Toggle Buttons for Mode -->
+                <div class="flex justify-end mb-2" id="div-toggle-mode">
+                    <button type="button" onclick="UI.toggleDetailedMode()"
+                        class="text-xs theme-text-accent font-bold hover:underline flex items-center">
+                        <i id="icon-detailed" class="far fa-square mr-1"></i> <span data-i18n="detailed_mode">Modo
+                            Detallado (Cant * Unit)</span>
+                    </button>
                 </div>
-                <div id="detailed-inputs" class="flex gap-2 mb-3 hidden-section">
-                    <div class="w-1/3">
-                        <label class="label-std" data-i18n="qty">Cant.</label>
-                        <input type="number" id="inp-qty" value="1" class="input-std text-center"
-                            oninput="UI.calcTotal()">
-                    </div>
-                    <div class="w-2/3">
-                        <label class="label-std" data-i18n="unit_value">Valor Unitario</label>
-                        <input type="number" id="inp-unit" class="input-std" placeholder="0" oninput="UI.calcTotal()">
-                    </div>
-                </div>
-                <div class="mb-4">
-                    <label class="label-std text-blue-800" data-i18n="total_pay">Total a Pagar</label>
+
+                <div id="simple-input" class="mb-6 fade-in">
+                    <label class="block text-xs font-bold theme-text-muted uppercase tracking-wider mb-2"
+                        data-i18n="value">Valor</label>
                     <div class="relative">
-                        <span class="absolute left-3 top-2 text-gray-500 font-bold">$</span>
-                        <input type="number" id="inp-total"
-                            class="w-full border-2 border-blue-500 rounded p-2 pl-8 text-xl font-bold text-gray-800 outline-none"
+                        <span class="absolute left-4 top-3 theme-text-primary font-bold">$</span>
+                        <input type="number" id="inp-amount"
+                            class="w-full theme-bg-accent-light border theme-border rounded-xl p-3 pl-8 text-2xl theme-text-primary font-bold outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-400 transition"
                             placeholder="0">
                     </div>
                 </div>
-                <button type="button" id="btn-save-tx" onclick="App.saveTransaction()"
-                    class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-lg hover:bg-blue-700 transition"
-                    data-i18n="save">Guardar</button>
+
+                <div id="detailed-input" class="hidden-section mb-6 grid grid-cols-2 gap-3 fade-in">
+                    <div>
+                        <label class="block text-xs font-bold theme-text-muted uppercase tracking-wider mb-2"
+                            data-i18n="qty">Cant.</label>
+                        <input type="number" id="inp-qty" oninput="UI.calcTotal()"
+                            class="w-full theme-bg-accent-light border theme-border rounded-xl p-3 theme-text-primary font-bold outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-400 transition"
+                            placeholder="1">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold theme-text-muted uppercase tracking-wider mb-2"
+                            data-i18n="unit_value">Valor Unit.</label>
+                        <input type="number" id="inp-unit" oninput="UI.calcTotal()"
+                            class="w-full theme-bg-accent-light border theme-border rounded-xl p-3 theme-text-primary font-bold outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-400 transition"
+                            placeholder="0">
+                    </div>
+                    <div
+                        class="col-span-2 text-right text-sm theme-text-secondary font-bold pt-2 border-t theme-border mt-2">
+                        <span data-i18n="total_pay">Total a Pagar</span>: <span id="lbl-total-calc"
+                            class="text-xl theme-text-primary">$ 0</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mt-8">
+                    <button type="button" onclick="UI.discardForm()"
+                        class="w-full py-4 rounded-xl font-bold theme-text-secondary border theme-border hover:bg-gray-100 transition"
+                        data-i18n="discard_back">Descartar / Volver</button>
+                    <button type="submit" id="btn-save-tx"
+                        class="w-full py-4 rounded-xl font-bold text-white theme-bg-accent shadow-lg transform active:scale-95 transition"
+                        data-i18n="save">Guardar</button>
+                </div>
+
             </form>
         </div>
     </section>
 
     <section id="view-history" class="p-4 hidden-section fade-in">
-        <div class="flex justify-between items-center mb-3">
-            <h2 class="text-lg font-bold text-gray-800"><span data-i18n="history">Historial</span> <span
-                    id="history-counter" class="text-gray-400 text-sm font-normal ml-1"></span></h2>
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold theme-text-primary"><span data-i18n="history">Historial</span> <span
+                    id="history-counter" class="theme-text-muted text-sm font-normal ml-2"></span></h2>
             <div id="actions-history" class="hidden-section flex gap-2">
                 <button onclick="BackupManager.exportSelected()"
                     class="bg-green-600 text-white text-xs px-3 py-1 rounded font-bold shadow"><i
@@ -239,74 +554,96 @@
                         class="fas fa-trash"></i> <span data-i18n="delete">Borrar</span></button>
             </div>
         </div>
+
+        <div class="flex theme-bg-accent-light p-1 rounded-xl mb-4 border theme-border">
+            <button onclick="UI.setHistoryType('expense')" id="btn-hist-expense"
+                class="flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-300 theme-bg-accent text-white shadow-sm"
+                data-i18n="lbl_h_expenses">GASTOS</button>
+            <button onclick="UI.setHistoryType('income')" id="btn-hist-income"
+                class="flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-300 theme-text-secondary hover:bg-gray-100"
+                data-i18n="lbl_h_incomes">INGRESOS</button>
+        </div>
+
         <input type="text" id="search-history" onkeyup="UI.renderHistory()" placeholder="Buscar..."
             data-i18n-placeholder="search_placeholder"
-            class="w-full bg-white border rounded-full py-2 px-4 mb-3 shadow-sm text-sm">
-        <div class="flex justify-between items-center bg-gray-200 p-2 rounded mb-2 text-xs text-gray-600 font-bold">
-            <div class="w-8 text-center"><input type="checkbox" id="chk-all" class="checkbox-std"
+            class="w-full theme-bg-card border theme-border rounded-xl py-3 px-4 mb-4 shadow-sm text-sm theme-text-primary outline-none focus:ring-2 focus:ring-green-400">
+
+        <div
+            class="flex justify-between items-center theme-bg-accent-light p-3 rounded-xl mb-3 text-xs theme-text-secondary font-bold border theme-border">
+            <div class="w-8 text-center"><input type="checkbox" id="chk-all" class="checkbox-std accent-green-600"
                     onchange="App.toggleSelectAll(this)"></div>
             <div onclick="App.setSort('date')" class="cursor-pointer flex-1"><span data-i18n="sort_date">Fecha</span> <i
                     id="sort-icon-date" class="fas fa-sort ml-1"></i></div>
-            <div onclick="App.setSort('category')" class="cursor-pointer flex-1"><span
-                    data-i18n="sort_cat">Categ.</span> <i id="sort-icon-category" class="fas fa-sort ml-1"></i></div>
-            <div onclick="App.setSort('group')" class="cursor-pointer flex-1"><span data-i18n="sort_group">Grupo</span>
-                <i id="sort-icon-group" class="fas fa-sort ml-1"></i>
-            </div>
+            <div onclick="App.setSort('cat')" class="cursor-pointer flex-1"><span data-i18n="sort_cat">Cat.</span> <i
+                    id="sort-icon-cat" class="fas fa-sort ml-1 opacity-30"></i></div>
+            <div class="w-20 text-right"><span data-i18n="value">Valor</span></div>
         </div>
         <div id="history-list" class="space-y-2 pb-20"></div>
     </section>
 
     <section id="view-reportes" class="p-4 hidden-section fade-in">
-        <h2 class="text-lg font-bold text-gray-800 mb-4" data-i18n="smart_reports">Reportes Inteligentes</h2>
-        <div class="bg-white rounded-lg shadow p-3 mb-4">
-            <div class="grid grid-cols-2 gap-2 mb-3">
-                <div><label class="text-[10px] font-bold text-gray-500 uppercase" data-i18n="from">Desde</label><input
-                        type="date" id="rpt-start" class="w-full border rounded p-1 text-xs"
-                        onchange="UI.renderReports()"></div>
-                <div><label class="text-[10px] font-bold text-gray-500 uppercase" data-i18n="to">Hasta</label><input
-                        type="date" id="rpt-end" class="w-full border rounded p-1 text-xs"
-                        onchange="UI.renderReports()"></div>
+        <h2 class="text-xl font-bold theme-text-primary mb-4" data-i18n="smart_reports">Reportes Inteligentes</h2>
+        <div class="theme-bg-card rounded-2xl shadow-lg p-4 mb-4 border theme-border">
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="text-[10px] font-bold theme-text-muted uppercase mb-1 block"
+                        data-i18n="from">Desde</label>
+                    <input type="date" id="rpt-start"
+                        class="w-full theme-bg-accent-light border theme-border rounded-xl p-2 text-xs theme-text-primary font-bold outline-none"
+                        onchange="UI.renderReports()">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold theme-text-muted uppercase mb-1 block"
+                        data-i18n="to">Hasta</label>
+                    <input type="date" id="rpt-end"
+                        class="w-full theme-bg-accent-light border theme-border rounded-xl p-2 text-xs theme-text-primary font-bold outline-none"
+                        onchange="UI.renderReports()">
+                </div>
             </div>
-            <div class="flex justify-between gap-1 mb-3">
+            <div class="flex justify-between gap-2 mb-4">
                 <button onclick="App.setReportRange(1)"
-                    class="flex-1 bg-blue-50 text-blue-700 text-[10px] font-bold py-1 rounded border hover:bg-blue-100"
-                    data-i18n="this_month">Este
-                    Mes</button>
+                    class="flex-1 theme-bg-accent-light theme-text-accent-dark text-[10px] font-bold py-2 rounded-lg border theme-border hover:opacity-80 transition"
+                    data-i18n="this_month">Este Mes</button>
                 <button onclick="App.setReportRange(3)"
-                    class="flex-1 bg-gray-50 text-gray-600 text-[10px] font-bold py-1 rounded border hover:bg-gray-100"
-                    data-i18n="three_months">3
-                    Meses</button>
+                    class="flex-1 theme-bg-card theme-text-secondary text-[10px] font-bold py-2 rounded-lg border theme-border hover:bg-gray-100 transition"
+                    data-i18n="three_months">3 Meses</button>
                 <button onclick="App.setReportRange(12)"
-                    class="flex-1 bg-gray-50 text-gray-600 text-[10px] font-bold py-1 rounded border hover:bg-gray-100"
-                    data-i18n="this_year">Este
-                    Año</button>
+                    class="flex-1 theme-bg-card theme-text-secondary text-[10px] font-bold py-2 rounded-lg border theme-border hover:bg-gray-100 transition"
+                    data-i18n="this_year">Este Año</button>
             </div>
 
-            <details class="mb-3 border rounded bg-gray-50">
+            <details class="mb-4 border theme-border rounded-xl theme-bg-accent-light">
                 <summary
-                    class="text-[10px] font-bold text-gray-500 uppercase p-2 cursor-pointer list-none flex justify-between">
-                    <span data-i18n="adv_filters">Filtros Avanzados</span> <i class="fas fa-filter"></i>
+                    class="text-[10px] font-bold theme-text-secondary uppercase p-3 cursor-pointer list-none flex justify-between items-center outline-none">
+                    <span data-i18n="adv_filters">Filtros Avanzados</span> <i
+                        class="fas fa-filter theme-text-accent"></i>
                 </summary>
-                <div class="p-2 border-t bg-white">
-                    <div class="mb-2">
-                        <label class="text-[10px] font-bold text-gray-500 block mb-1"
+                <div class="p-3 border-t theme-border theme-bg-card rounded-b-xl">
+                    <div class="mb-3">
+                        <label class="text-[10px] font-bold theme-text-muted block mb-1"
                             data-i18n="categories">Categorías</label>
-                        <div id="filter-cats-container" class="max-h-24 overflow-y-auto border rounded p-1 space-y-1">
+                        <div id="filter-cats-container"
+                            class="max-h-24 overflow-y-auto border theme-border rounded-lg p-2 space-y-1 theme-text-primary">
                         </div>
                     </div>
-                    <div class="mb-2">
-                        <label class="text-[10px] font-bold text-gray-500 block mb-1" data-i18n="groups">Grupos</label>
-                        <div id="filter-groups-container" class="max-h-24 overflow-y-auto border rounded p-1 space-y-1">
+                    <div class="mb-3">
+                        <label class="text-[10px] font-bold theme-text-muted block mb-1"
+                            data-i18n="groups">Grupos</label>
+                        <div id="filter-groups-container"
+                            class="max-h-24 overflow-y-auto border theme-border rounded-lg p-2 space-y-1 theme-text-primary">
                         </div>
                     </div>
-                    <button onclick="UI.clearFilters()" class="text-[10px] text-blue-600 underline w-full text-center"
+                    <button onclick="UI.clearFilters()"
+                        class="text-[10px] theme-text-accent underline w-full text-center font-bold"
                         data-i18n="clear_filters">Limpiar Filtros</button>
                 </div>
             </details>
 
             <div>
-                <label class="text-[10px] font-bold text-gray-500 uppercase" data-i18n="chart_type">Gráfico</label>
-                <select id="rpt-type" class="w-full border rounded p-1 text-xs bg-gray-50"
+                <label class="text-[10px] font-bold theme-text-muted uppercase mb-1 block"
+                    data-i18n="chart_type">Gráfico</label>
+                <select id="rpt-type"
+                    class="w-full border theme-border rounded-xl p-2 text-xs theme-bg-accent-light theme-text-primary font-bold outline-none"
                     onchange="UI.renderReports()">
                     <option value="bar" data-i18n="chart_bar">Barras (Total Mensual)</option>
                     <option value="grouped" data-i18n="chart_grouped">Barras Agrupadas (Comparativo)</option>
@@ -316,220 +653,248 @@
                 </select>
             </div>
         </div>
-        <div class="bg-white rounded-lg shadow p-2 mb-4 h-72"><canvas id="chart-main"></canvas></div>
-        <div class="bg-white rounded-lg shadow p-3 mb-6">
-            <div class="flex justify-between items-center"><span class="text-xs text-gray-500"
-                    data-i18n="total_period">Total
-                    Periodo:</span><span class="text-lg font-bold text-blue-700" id="rpt-total-sum">$ 0</span></div>
-            <div class="flex justify-between items-center mt-1"><span class="text-xs text-gray-500"
-                    data-i18n="avg_monthly">Promedio
-                    Mensual:</span><span class="text-sm font-bold text-gray-700" id="rpt-avg">$ 0</span></div>
+        <div class="theme-bg-card rounded-2xl shadow-lg p-3 mb-4 h-72 border theme-border"><canvas
+                id="chart-main"></canvas></div>
+        <div class="theme-bg-card rounded-2xl shadow-lg p-4 mb-6 border theme-border">
+            <div class="flex justify-between items-center"><span class="text-xs theme-text-muted font-bold uppercase"
+                    data-i18n="total_period">Total Periodo:</span><span class="text-xl font-bold theme-text-primary"
+                    id="rpt-total-sum">$ 0</span></div>
+            <div class="flex justify-between items-center mt-2 border-t theme-border pt-2"><span
+                    class="text-xs theme-text-muted font-bold uppercase" data-i18n="avg_monthly">Promedio
+                    Mensual:</span><span class="text-sm font-bold theme-text-secondary" id="rpt-avg">$ 0</span></div>
         </div>
     </section>
 
     <section id="view-config" class="p-4 hidden-section fade-in">
-        <h2 class="text-lg font-bold text-gray-800 mb-4" data-i18n="configuration">Configuración</h2>
+        <h2 class="text-xl font-bold theme-text-primary mb-6" data-i18n="configuration">Configuración</h2>
 
-        <div class="bg-white rounded-lg shadow mb-4 p-4 flex justify-between items-center">
-            <span class="font-bold text-sm text-gray-700" data-i18n="lang_select">Idioma / Language</span>
-            <select onchange="I18n.setLanguage(this.value)" id="lang-selector"
-                class="border rounded p-1 text-sm bg-gray-50">
-                <option value="es">Español</option>
-                <option value="en">English</option>
-                <option value="pt">Português</option>
-            </select>
-        </div>
-
-        <div class="bg-white rounded-lg shadow mb-4">
+        <div class="theme-bg-card rounded-2xl shadow-lg mb-4 border theme-border overflow-hidden">
             <div onclick="UI.toggleConfigSection('cfg-cats')"
-                class="p-4 border-b flex justify-between items-center cursor-pointer">
-                <span class="font-bold text-sm"><i class="fas fa-tags text-purple-500 mr-2"></i> <span
-                        data-i18n="cats_groups">Categorías y
-                        Grupos</span></span><i class="fas fa-chevron-down"></i>
+                class="p-4 border-b theme-border flex justify-between items-center cursor-pointer hover:bg-opacity-50 hover:bg-gray-100 transition">
+                <span class="font-bold text-sm theme-text-primary"><i class="fas fa-tags theme-text-accent mr-2"></i>
+                    <span data-i18n="cats_groups">Categorías y Grupos</span></span><i
+                    class="fas fa-chevron-down theme-text-muted"></i>
             </div>
-            <div id="cfg-cats" class="hidden-section p-4 bg-gray-50">
+            <div id="cfg-cats" class="hidden-section p-4 theme-bg-accent-light">
                 <div id="list-cats-cfg" class="space-y-2 mb-3"></div>
                 <button onclick="App.CategoryManager.create()"
-                    class="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded font-bold w-full mt-2"
-                    data-i18n="new_cat">+ Nueva
-                    Categoría</button>
+                    class="text-xs theme-bg-accent text-white px-3 py-2 rounded-xl font-bold w-full mt-2 shadow-sm transform active:scale-95 transition"
+                    data-i18n="new_cat">+ Nueva Categoría</button>
             </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow mb-4">
+        <div class="theme-bg-card rounded-2xl shadow-lg mb-4 border theme-border overflow-hidden">
             <div onclick="UI.toggleConfigSection('cfg-services')"
-                class="p-4 border-b flex justify-between items-center cursor-pointer">
-                <span class="font-bold text-sm"><i class="fas fa-bolt text-yellow-500 mr-2"></i> <span
-                        data-i18n="rec_services">Servicios
-                        Recurrentes</span></span><i class="fas fa-chevron-down"></i>
+                class="p-4 border-b theme-border flex justify-between items-center cursor-pointer hover:bg-opacity-50 hover:bg-gray-100 transition">
+                <span class="font-bold text-sm theme-text-primary"><i class="fas fa-bolt theme-text-accent mr-2"></i>
+                    <span data-i18n="rec_services">Servicios Recurrentes</span></span><i
+                    class="fas fa-chevron-down theme-text-muted"></i>
             </div>
-            <div id="cfg-services" class="hidden-section p-4 bg-gray-50">
+            <div id="cfg-services" class="hidden-section p-4 theme-bg-accent-light">
                 <div id="list-services-cfg" class="space-y-2 mb-3"></div>
                 <button onclick="App.addServicePrompt()"
-                    class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded font-bold w-full mb-2"
-                    data-i18n="new_service">+ Nuevo
-                    Servicio</button>
-                <div class="border-t pt-2 mt-2">
+                    class="text-xs theme-bg-accent text-white px-3 py-2 rounded-xl font-bold w-full mb-2 shadow-sm transform active:scale-95 transition"
+                    data-i18n="new_service">+ Nuevo Servicio</button>
+                <div class="border-t theme-border pt-3 mt-2 flex flex-col gap-2">
                     <button onclick="App.Maintenance.linkHistory()"
-                        class="text-xs bg-gray-200 text-gray-700 px-3 py-2 rounded font-bold w-full mb-2"><i
+                        class="text-xs theme-bg-card theme-text-secondary border theme-border px-3 py-2 rounded-xl font-bold w-full"><i
                             class="fas fa-magic"></i> <span data-i18n="link_history">Vincular Historial
                             Automáticamente</span></button>
                     <button onclick="NotificationManager.test()"
-                        class="text-xs bg-yellow-100 text-yellow-700 px-3 py-2 rounded font-bold w-full"><i
+                        class="text-xs theme-bg-card theme-text-secondary border theme-border px-3 py-2 rounded-xl font-bold w-full"><i
                             class="fas fa-bell"></i> <span data-i18n="test_notif">Probar Notificación del
                             Sistema</span></button>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow p-4 mb-6">
-            <span class="font-bold text-sm block mb-3 text-gray-700"><i
-                    class="fas fa-file-import text-blue-500 mr-2"></i> <span data-i18n="data_import">Importación de
-                    Datos</span></span>
+        <div class="mb-6">
+            <h3 class="font-bold theme-text-secondary mb-3 pl-2 border-l-4 theme-border" data-i18n="data_management">
+                Gestión de Datos</h3>
             <div class="grid grid-cols-2 gap-3">
-                <label
-                    class="block w-full bg-gray-50 border border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-yellow-50 transition">
-                    <i class="fas fa-folder-open text-yellow-500 text-2xl mb-1"></i>
-                    <span class="block text-xs font-bold text-gray-600" data-i18n="backup_json">Copia Seguridad
-                        (JSON)</span>
-                    <input type="file" class="hidden" accept=".json" onchange="BackupManager.importJSON(this)">
-                </label>
-                <label
-                    class="block w-full bg-gray-50 border border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-green-50 transition">
-                    <i class="fas fa-file-csv text-green-600 text-2xl mb-1"></i>
-                    <span class="block text-xs font-bold text-gray-600" data-i18n="history_csv">Datos Históricos
-                        (CSV)</span>
-                    <input type="file" class="hidden" accept=".csv" onchange="BackupManager.importCSV(this)">
-                </label>
+                <!-- Export -->
+                <div class="theme-bg-card p-4 rounded-2xl border theme-border flex flex-col gap-2 shadow-sm">
+                    <h4 class="text-[10px] font-bold theme-text-muted uppercase tracking-wider" data-i18n="lbl_export">
+                        Exportar</h4>
+                    <button onclick="BackupManager.exportJSON()"
+                        class="w-full theme-bg-accent-light border theme-border theme-text-primary font-bold py-2 rounded-lg text-xs hover:opacity-80 transition flex items-center justify-center">
+                        <i class="fas fa-file-code mr-1"></i> JSON
+                    </button>
+                    <button onclick="BackupManager.generateCSV()"
+                        class="w-full theme-bg-accent-light border theme-border theme-text-primary font-bold py-2 rounded-lg text-xs hover:opacity-80 transition flex items-center justify-center">
+                        <i class="fas fa-file-csv mr-1"></i> CSV
+                    </button>
+                </div>
+
+                <!-- Import -->
+                <div class="theme-bg-card p-4 rounded-2xl border theme-border flex flex-col gap-2 shadow-sm">
+                    <h4 class="text-[10px] font-bold theme-text-muted uppercase tracking-wider" data-i18n="lbl_import">
+                        Importar</h4>
+                    <label
+                        class="block w-full theme-bg-accent-light border theme-border rounded-lg py-2 text-center cursor-pointer hover:opacity-80 text-xs font-bold theme-text-primary">
+                        <i class="fas fa-file-code mr-1"></i> JSON
+                        <input type="file" class="hidden" accept=".json" onchange="BackupManager.importJSON(this)">
+                    </label>
+                    <label
+                        class="block w-full theme-bg-accent-light border theme-border rounded-lg py-2 text-center cursor-pointer hover:opacity-80 text-xs font-bold theme-text-primary">
+                        <i class="fas fa-file-csv mr-1"></i> CSV
+                        <input type="file" class="hidden" accept=".csv" onchange="BackupManager.importCSV(this)">
+                    </label>
+                </div>
             </div>
         </div>
 
         <div class="text-center mt-10 pb-10">
             <button onclick="App.factoryReset()"
-                class="border border-red-300 text-red-400 hover:bg-red-50 hover:text-red-600 font-bold text-xs py-2 px-4 rounded transition"
-                data-i18n="factory_reset">Restablecer
-                Datos de Fábrica</button>
+                class="border theme-border text-red-400 hover:bg-red-50 hover:text-red-600 font-bold text-xs py-2 px-4 rounded-xl transition"
+                data-i18n="factory_reset">Restablecer Datos de Fábrica</button>
         </div>
     </section>
 
-    <section id="view-help"
-        class="p-4 hidden-section fade-in bg-white min-h-screen fixed top-0 left-0 w-full z-50 overflow-y-auto">
-        <div class="flex justify-between items-center mb-6 border-b pb-4 sticky top-0 bg-white z-10">
-            <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-question-circle text-blue-600 mr-2"></i> <span
-                    data-i18n="help_guide">Guía
-                    de Uso</span></h2>
-            <button onclick="App.nav('dashboard')" class="text-gray-500 hover:text-gray-800"><i
-                    class="fas fa-times text-xl"></i></button>
-        </div>
-
-        <div class="space-y-4 pb-20">
-            <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <h3 class="font-bold text-blue-800 text-sm mb-2" data-i18n="welcome_title">Bienvenido a Mis Gastos</h3>
-                <p class="text-xs text-blue-700" data-i18n="welcome_text">Esta aplicación permite llevar el control
-                    detallado de tus finanzas
-                    personales, funcionando 100% offline.</p>
+    <section id="view-help" class="hidden-section pb-20 fade-in">
+        <div class="space-y-4">
+            <div class="theme-bg-accent-light p-5 rounded-2xl border theme-border">
+                <h3 class="font-bold theme-text-primary text-sm mb-2" data-i18n="welcome_title">Bienvenido a
+                    SmartFinance</h3>
+                <p class="text-xs theme-text-secondary leading-relaxed" data-i18n="welcome_text">Esta aplicación permite
+                    llevar el control detallado de tus finanzas personales, funcionando 100% offline.</p>
             </div>
 
-            <details class="group bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+            <details class="group theme-bg-card border theme-border rounded-xl overflow-hidden shadow-sm">
                 <summary
-                    class="flex justify-between items-center p-3 cursor-pointer bg-gray-50 hover:bg-gray-100 font-bold text-gray-700 text-sm">
-                    <span><i class="fas fa-plus-circle text-green-500 mr-2"></i> <span
+                    class="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 font-bold theme-text-primary text-sm">
+                    <span><i class="fas fa-layer-group theme-text-accent mr-2"></i> <span
+                            data-i18n="help_cats_title">Categorías y Grupos</span></span>
+                    <i class="fas fa-chevron-down theme-text-muted group-open:rotate-180 transition"></i>
+                </summary>
+                <div
+                    class="p-4 text-xs theme-text-secondary leading-relaxed border-t theme-border theme-bg-accent-light">
+                    <p data-i18n="help_cats_text">Clasifica tus gastos. Puedes crear nuevas categorías o agregar grupos
+                        a las existentes.</p>
+                    <div class="mt-2 theme-text-muted italic border-l-2 theme-border pl-2">
+                        <p class="font-bold text-[10px] theme-text-accent mb-1">Ejemplo (Mascota):</p>
+                        <p>1. Configurar > Categorías > Nueva (+).</p>
+                        <p>2. Nombre: "Mascota".</p>
+                        <p>3. Agregar Grupos: "Comida", "Veterinaria", "Juguetes".</p>
+                    </div>
+                </div>
+            </details>
+
+            <details class="group theme-bg-card border theme-border rounded-xl overflow-hidden shadow-sm">
+                <summary
+                    class="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 font-bold theme-text-primary text-sm">
+                    <span><i class="fas fa-plus-circle theme-text-accent mr-2"></i> <span
                             data-i18n="help_reg_title">Registro de Gastos</span></span>
-                    <i class="fas fa-chevron-down text-gray-400 group-open:rotate-180 transition"></i>
+                    <i class="fas fa-chevron-down theme-text-muted group-open:rotate-180 transition"></i>
                 </summary>
-                <div class="p-3 text-xs text-gray-600 leading-relaxed border-t">
-                    <p data-i18n="help_reg_text">Usa el botón central (+) para agregar movimientos. Si seleccionas un
-                        Grupo vinculado a un servicio, la app lo detectará automáticamente.</p>
+                <div
+                    class="p-4 text-xs theme-text-secondary leading-relaxed border-t theme-border theme-bg-accent-light">
+                    <p data-i18n="help_reg_text">Registra tus gastos diarios seleccionando la categoría y el grupo
+                        correspondiente.</p>
+                    <div class="mt-2 theme-text-muted italic border-l-2 theme-border pl-2">
+                        <p class="font-bold text-[10px] theme-text-accent mb-1">Modo Detallado:</p>
+                        <p>Si compras varias unidades de un mismo producto, activa "Modo Detallado" para ingresar
+                            Cantidad y Valor Unitario.</p>
+                    </div>
                 </div>
             </details>
 
-            <details class="group bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+            <details class="group theme-bg-card border theme-border rounded-xl overflow-hidden shadow-sm">
                 <summary
-                    class="flex justify-between items-center p-3 cursor-pointer bg-gray-50 hover:bg-gray-100 font-bold text-gray-700 text-sm">
-                    <span><i class="fas fa-bolt text-yellow-500 mr-2"></i> <span data-i18n="help_alerts_title">Alertas y
-                            Servicios</span></span>
-                    <i class="fas fa-chevron-down text-gray-400 group-open:rotate-180 transition"></i>
+                    class="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 font-bold theme-text-primary text-sm">
+                    <span><i class="fas fa-file-invoice-dollar theme-text-accent mr-2"></i> <span
+                            data-i18n="help_serv_title">Servicios Recurrentes</span></span>
+                    <i class="fas fa-chevron-down theme-text-muted group-open:rotate-180 transition"></i>
                 </summary>
-                <div class="p-3 text-xs text-gray-600 leading-relaxed border-t">
-                    <p class="mb-2" data-i18n="help_alerts_text">Configura tus pagos recurrentes en Configuración.
-                        Frecuencias disponibles: Mensual, Bimestral.</p>
+                <div
+                    class="p-4 text-xs theme-text-secondary leading-relaxed border-t theme-border theme-bg-accent-light">
+                    <p data-i18n="help_serv_text">Configura servicios fijos (Luz, Agua, Netflix) para recibir
+                        recordatorios de pago.</p>
+                    <div class="mt-2 theme-text-muted italic border-l-2 theme-border pl-2">
+                        <p class="font-bold text-[10px] theme-text-accent mb-1">Vinculación:</p>
+                        <p>Al registrar un gasto, si seleccionas la categoría/grupo del servicio (ej. Servicios > Luz),
+                            el sistema marcará automáticamente el servicio como "Pagado" este mes.</p>
+                    </div>
                 </div>
             </details>
 
-            <details class="group bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+            <details class="group theme-bg-card border theme-border rounded-xl overflow-hidden shadow-sm">
                 <summary
-                    class="flex justify-between items-center p-3 cursor-pointer bg-gray-50 hover:bg-gray-100 font-bold text-gray-700 text-sm">
-                    <span><i class="fas fa-bell text-red-500 mr-2"></i> <span data-i18n="help_sys_title">Alertas del
-                            Sistema</span></span>
-                    <i class="fas fa-chevron-down text-gray-400 group-open:rotate-180 transition"></i>
+                    class="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 font-bold theme-text-primary text-sm">
+                    <span><i class="fas fa-database theme-text-accent mr-2"></i> <span
+                            data-i18n="help_data_title">Respaldo de Datos</span></span>
+                    <i class="fas fa-chevron-down theme-text-muted group-open:rotate-180 transition"></i>
                 </summary>
-                <div class="p-3 text-xs text-gray-600 leading-relaxed border-t">
-                    <p class="mb-2" data-i18n="help_sys_text">El sistema monitorea tus servicios y te notifica 3 días
-                        antes del corte.</p>
+                <div
+                    class="p-4 text-xs theme-text-secondary leading-relaxed border-t theme-border theme-bg-accent-light">
+                    <p data-i18n="help_data_text">Tus datos son privados y viven en este dispositivo.</p>
+                    <div class="mt-2 theme-text-muted italic border-l-2 theme-border pl-2">
+                        <p class="font-bold text-[10px] theme-text-accent mb-1">Importante:</p>
+                        <p>Exporta regularmente tu copia de seguridad (JSON) para evitar pérdida de datos si limpias el
+                            navegador.</p>
+                    </div>
                 </div>
             </details>
 
-            <details class="group bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                <summary
-                    class="flex justify-between items-center p-3 cursor-pointer bg-gray-50 hover:bg-gray-100 font-bold text-gray-700 text-sm">
-                    <span><i class="fas fa-database text-blue-500 mr-2"></i> <span data-i18n="help_data_title">Respaldo
-                            de Datos</span></span>
-                    <i class="fas fa-chevron-down text-gray-400 group-open:rotate-180 transition"></i>
-                </summary>
-                <div class="p-3 text-xs text-gray-600 leading-relaxed border-t">
-                    <p class="mb-2" data-i18n="help_data_text">Tus datos son privados y viven en este dispositivo.
-                        Puedes exportar e importar backups.</p>
-                </div>
-            </details>
-
-            <div class="text-center mt-8 border-t pt-4">
-                <p class="font-bold text-gray-800 text-sm">Mis Gastos App</p>
-                <p class="text-xs text-gray-400">Versión 1.1.0</p>
-                <p class="text-[10px] text-gray-400 mt-2">© GabHoX - ghdiez@gmail.com - 2025 - Todos los derechos
-                    reservados</p>
+            <div class="text-center mt-8 border-t theme-border pt-4">
+                <p class="font-bold theme-text-primary text-sm">SmartFinance App</p>
+                <p class="text-xs theme-text-muted">Versión 1.1.0</p>
+                <p class="text-[10px] theme-text-muted mt-2">© GabHoX - ghdiez.01@gmail.com - 2025</p>
             </div>
         </div>
     </section>
 
     <section id="view-cat-editor"
-        class="p-4 hidden-section bg-white min-h-screen fixed top-0 left-0 w-full z-50 overflow-y-auto">
-        <div class="flex justify-between items-center mb-6 border-b pb-4">
-            <h2 class="text-xl font-bold text-gray-800" data-i18n="edit_cat">Editar Categoría</h2>
-            <button onclick="App.nav('config')" class="text-gray-500"><i class="fas fa-times text-xl"></i></button>
+        class="p-4 hidden-section theme-bg-card min-h-screen fixed top-0 left-0 w-full z-50 overflow-y-auto">
+        <div class="flex justify-between items-center mb-6 border-b theme-border pb-4">
+            <h2 class="text-xl font-bold theme-text-primary" data-i18n="edit_cat">Editar Categoría</h2>
+            <button onclick="App.nav('config')" class="theme-text-muted"><i class="fas fa-times text-xl"></i></button>
         </div>
         <form onsubmit="event.preventDefault(); App.CategoryManager.save();">
             <input type="hidden" id="edit-cat-id">
-            <div class="mb-4"><label class="label-std" data-i18n="name">Nombre</label><input type="text"
-                    id="edit-cat-name" class="input-std font-bold text-lg" required></div>
-            <div class="mb-4"><label class="label-std mb-2" data-i18n="groups">Grupos</label>
+            <div class="mb-4"><label class="block text-xs font-bold theme-text-muted uppercase mb-1"
+                    data-i18n="name">Nombre</label><input type="text" id="edit-cat-name"
+                    class="w-full theme-bg-accent-light border theme-border rounded-xl p-3 theme-text-primary font-bold outline-none"
+                    required></div>
+            <div class="mb-4"><label class="block text-xs font-bold theme-text-muted uppercase mb-1"
+                    data-i18n="groups">Grupos</label>
                 <div id="edit-cat-groups-list" class="space-y-2 mb-3"></div><button type="button"
-                    onclick="UI.CategoryEditor.addGroupInput('')" class="text-sm text-blue-600 font-bold"
+                    onclick="UI.CategoryEditor.addGroupInput('')" class="text-sm theme-text-accent font-bold"
                     data-i18n="add_group">+
                     Grupo</button>
             </div>
-            <div class="fixed bottom-0 left-0 w-full p-4 bg-white border-t flex gap-3"><button type="button"
-                    onclick="App.nav('config')" class="flex-1 bg-gray-200 font-bold py-3 rounded-lg"
+            <div class="fixed bottom-0 left-0 w-full p-4 theme-bg-card border-t theme-border flex gap-3"><button
+                    type="button" onclick="App.nav('config')"
+                    class="flex-1 theme-bg-accent-light theme-text-primary font-bold py-3 rounded-lg border theme-border"
                     data-i18n="cancel">Cancelar</button><button type="submit"
-                    class="flex-1 bg-purple-600 text-white font-bold py-3 rounded-lg" data-i18n="save">Guardar</button>
+                    class="flex-1 theme-bg-accent text-white font-bold py-3 rounded-lg shadow-md"
+                    data-i18n="save">Guardar</button>
             </div>
         </form>
         <div class="h-20"></div>
     </section>
 
     <nav
-        class="fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around py-2 pb-6 z-40 shadow-inner">
-        <button onclick="App.nav('dashboard')" class="nav-btn active-nav flex flex-col items-center w-full"
-            id="btn-dashboard"><i class="fas fa-home text-xl mb-1"></i><span class="text-[10px]"
-                data-i18n="nav_home">Inicio</span></button>
-        <button onclick="App.nav('add')" class="nav-btn inactive-nav flex flex-col items-center w-full" id="btn-add">
+        class="fixed bottom-0 w-full theme-bg-card border-t theme-border flex justify-around py-3 pb-6 z-40 shadow-inner transition-colors duration-300">
+        <button onclick="App.nav('dashboard')" class="nav-btn active-nav flex flex-col items-center w-full transition"
+            id="btn-dashboard">
+            <i class="fas fa-home text-2xl mb-1"></i><span class="text-[10px] font-bold"
+                data-i18n="nav_home">Inicio</span>
+        </button>
+
+        <button onclick="App.nav('add')" class="nav-btn inactive-nav flex flex-col items-center w-full relative"
+            id="btn-add">
             <div
-                class="bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center -mt-6 shadow-lg border-4 border-gray-100">
-                <i class="fas fa-plus text-xl"></i>
+                class="theme-bg-accent text-white rounded-full w-14 h-14 flex items-center justify-center -mt-8 shadow-lg border-4 theme-border transition-transform active:scale-95">
+                <i class="fas fa-plus text-2xl"></i>
             </div>
         </button>
-        <button onclick="App.nav('history')" class="nav-btn inactive-nav flex flex-col items-center w-full"
-            id="btn-history"><i class="fas fa-list text-xl mb-1"></i><span class="text-[10px]"
-                data-i18n="nav_history">Historial</span></button>
+
+        <button onclick="App.nav('history')" class="nav-btn inactive-nav flex flex-col items-center w-full transition"
+            id="btn-history">
+            <i class="fas fa-list text-2xl mb-1"></i><span class="text-[10px] font-bold"
+                data-i18n="nav_history">Historial</span>
+        </button>
     </nav>
 
     <script>
@@ -538,6 +903,10 @@
 
         const DEFAULT_DATA = {
             transactions: [],
+            incomes: [],
+            settings: {
+                balanceThresholds: { min: 500000, mid: 1000000 }
+            },
             categories: [
                 { id: 'cat_vivienda', name: 'Vivienda', groups: ['Arriendo', 'Reparaciones', 'Muebles', 'Impuesto', 'Limpieza', 'Otro'] },
                 { id: 'cat_servicios', name: 'Servicios', groups: ['Agua', 'Luz', 'Gas', 'Internet', 'Celular', 'Administración', 'Suscripciones'] },
@@ -548,31 +917,241 @@
         };
 
         let store = { ...DEFAULT_DATA };
-        let state = { editTxId: null, historySort: { key: 'date', dir: 'desc' }, selectedTx: new Set(), reportChart: null, filteredCount: 0, filterCats: new Set(), filterGroups: new Set() };
+        let state = { editTxId: null, editIncId: null, historySort: { key: 'date', dir: 'desc' }, selectedTx: new Set(), reportChart: null, filteredCount: 0, filterCats: new Set(), filterGroups: new Set(), historyType: 'expense' };
 
         const App = {
-            init: () => {
+            init: async () => {
                 try {
+                    // Initialize LocalForage
+                    localforage.config({ name: 'GastosApp', storeName: 'data' });
+
+                    let saved = await localforage.getItem('gastosApp_data');
+
+                    // Migration: If not in localForage, check localStorage
+                    if (!saved) {
+                        const localSaved = localStorage.getItem('gastosApp_data');
+                        if (localSaved) {
+                            saved = JSON.parse(localSaved); // It was stringified
+                            // We don't save immediately here, we let the merge logic handle it, 
+                            // but we will mark it for saving to complete migration.
+                            console.log("Migrating from localStorage to localForage...");
+                        }
+                    }
+
+                    if (saved) {
+                        // If it came from localForage it might already be an object if we stored it as such, 
+                        // but for consistency with previous stringify logic, let's assume valid object or parse it.
+                        // localForage stores objects natively, but our old logic used JSON.stringify. 
+                        // To be safe: checks type.
+                        const parsed = (typeof saved === 'string') ? JSON.parse(saved) : saved;
+                        store = { ...DEFAULT_DATA, ...parsed, settings: { ...DEFAULT_DATA.settings, ...(parsed.settings || {}) } };
+                        store.incomes = store.incomes || [];
+                    }
+
                     I18n.init();
-                    document.getElementById('lang-selector').value = I18n.currentLang;
-                    const saved = localStorage.getItem('gastosApp_data');
-                    if (saved) store = JSON.parse(saved);
+                    // Removed lang-selector legacy code
                     App.setReportRange(1);
                     document.getElementById('inp-date').value = new Date().toLocaleDateString('en-CA');
-                    UI.renderCategoriesSelect(); UI.renderServicesConfig(); UI.renderCategoriesConfig(); UI.renderDeepFilters();
+                    UI.renderCategoriesSelect(); UI.renderServicesConfig(); UI.renderCategoriesConfig(); UI.renderDeepFilters(); UI.renderSettings();
+                    UI.ThemeManager.init();
                     NotificationManager.init();
-                    App.nav('dashboard');
+
+                    if (!saved) App.nav('help'); else App.nav('dashboard');
+
+                    // If we migrated (found in localStorage but not localForage), save now to persist in new DB
+                    if (!await localforage.getItem('gastosApp_data') && localStorage.getItem('gastosApp_data')) {
+                        await App.save();
+                        // Optional: localStorage.removeItem('gastosApp_data'); // Keep for safety for now
+                    }
+
                 } catch (err) {
                     alert("Error starting app: " + err.message + "\nStack: " + err.stack);
                     console.error(err);
                 }
             },
 
-            save: () => { localStorage.setItem('gastosApp_data', JSON.stringify(store)); App.refreshAll(); },
-            refreshAll: () => { UI.updateDashboard(); UI.renderHistory(); UI.renderCategoriesSelect(); UI.renderCategoriesConfig(); UI.renderServicesConfig(); UI.renderDeepFilters(); },
+            showBalanceMenu: async () => {
+                const { value: result } = await Swal.fire({
+                    title: I18n.t('balance_options'),
+                    showCancelButton: true,
+                    showConfirmButton: false,
+                    cancelButtonText: I18n.t('cancel'),
+                    buttonsStyling: false,
+                    customClass: {
+                        popup: 'rounded-2xl',
+                        cancelButton: 'w-full mt-2 theme-text-secondary font-bold py-3 rounded-xl border theme-border hover:bg-gray-100 transition'
+                    },
+                    html: `
+                        <button onclick="swal.clickConfirm(); setTimeout(() => App.adjustBalancePrompt(), 200)" class="w-full theme-bg-accent-light theme-text-primary font-bold py-3 rounded-xl mb-2 border theme-border hover:opacity-80">
+                            <i class="fas fa-scale-balanced mr-2"></i> ${I18n.t('adjust_balance')}
+                        </button>
+                        <button onclick="swal.clickConfirm(); setTimeout(() => App.balanceSettingsPrompt(), 200)" class="w-full theme-bg-accent-light theme-text-primary font-bold py-3 rounded-xl border theme-border hover:opacity-80">
+                            <i class="fas fa-sliders-h mr-2"></i> ${I18n.t('config_thresholds')}
+                        </button>
+                    `
+                });
+            },
+
+            showHelpMenu: async () => {
+                const { value: result } = await Swal.fire({
+                    title: "Menu",
+                    showCancelButton: true,
+                    showConfirmButton: false,
+                    customClass: { popup: 'rounded-2xl' },
+                    html: `
+                        <button onclick="swal.clickConfirm(); setTimeout(() => App.showAbout(), 200)" class="w-full theme-bg-accent-light theme-text-primary font-bold py-3 rounded-xl mb-2 border theme-border hover:opacity-80">
+                            <i class="fas fa-info-circle mr-2"></i> ${I18n.t('menu_about')}
+                        </button>
+                        <button onclick="swal.clickConfirm(); setTimeout(() => App.showGuide(), 200)" class="w-full theme-bg-card theme-text-secondary font-bold py-3 rounded-xl border theme-border hover:opacity-80">
+                            <i class="fas fa-book mr-2"></i> ${I18n.t('menu_help')}
+                        </button>
+                    `
+                });
+            },
+
+            showAbout: () => {
+                Swal.fire({
+                    title: I18n.t('about_title'),
+                    html: `<p class="text-sm text-gray-600">${I18n.t('copyright')}</p>`,
+                    icon: 'info',
+                    confirmButtonText: I18n.t('btn_close'),
+                    customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl' }
+                });
+            },
+
+            showGuide: () => {
+                // Fetch the content from the hidden view-help section
+                const content = document.getElementById('view-help').innerHTML;
+                Swal.fire({
+                    html: `<div class="text-left max-h-[70vh] overflow-y-auto">${content}</div>`,
+                    width: '90%',
+                    showCloseButton: true,
+                    showConfirmButton: false,
+                    customClass: { popup: 'rounded-2xl' }
+                });
+            },
+
+            balanceSettingsPrompt: async () => {
+                const min = store.settings.balanceThresholds.min;
+                const mid = store.settings.balanceThresholds.mid;
+
+                const { value: formValues } = await Swal.fire({
+                    title: I18n.t('config_thresholds'),
+                    html: `
+                        <label class="label-std text-xs text-left">Mínimo (Rojo)</label>
+                        <input id="swal-min" class="swal2-input" type="number" value="${min}">
+                        <label class="label-std text-xs text-left">Meta (Verde)</label>
+                        <input id="swal-mid" class="swal2-input" type="number" value="${mid}">
+                    `,
+                    focusConfirm: false,
+                    customClass: { popup: 'rounded-2xl' },
+                    preConfirm: () => {
+                        return [
+                            document.getElementById('swal-min').value,
+                            document.getElementById('swal-mid').value
+                        ]
+                    }
+                });
+
+                if (formValues) {
+                    store.settings.balanceThresholds = { min: parseFloat(formValues[0]), mid: parseFloat(formValues[1]) };
+                    App.save();
+                    Swal.fire({ title: I18n.t('saved'), icon: 'success', timer: 1000, showConfirmButton: false });
+                }
+            },
+
+            adjustBalancePrompt: async () => {
+                const totalInc = (store.incomes || []).reduce((s, i) => s + i.total, 0);
+                const totalExp = store.transactions.reduce((s, t) => s + t.total, 0);
+                const currentBal = totalInc - totalExp;
+
+                const { value: realBalStr } = await Swal.fire({
+                    title: I18n.t('adjust_balance'),
+                    input: 'number',
+                    inputLabel: `Saldo Sistema: $ ${currentBal.toLocaleString()}. Ingresa tu saldo real:`,
+                    inputPlaceholder: "Ej: 500000",
+                    showCancelButton: true,
+                    cancelButtonText: I18n.t('cancel'),
+                    customClass: { popup: 'rounded-2xl' }
+                });
+
+                if (!realBalStr) return;
+                const realBal = parseFloat(realBalStr);
+                const diff = realBal - currentBal;
+
+                if (diff === 0) return Swal.fire("Info", "El saldo ya cuadra", "info");
+
+                // Determine Date for Adjustment (Oldest transaction date or today)
+                let date = new Date().toISOString().split('T')[0];
+                if (store.transactions.length > 0) {
+                    const sorted = [...store.transactions].sort((a, b) => a.date.localeCompare(b.date));
+                    date = sorted[0].date;
+                }
+
+                if (diff > 0) {
+                    // Need to add Income
+                    store.incomes.push({
+                        id: crypto.randomUUID(),
+                        date: date,
+                        description: "Ajuste Saldo Inicial",
+                        total: diff
+                    });
+                } else {
+                    // Need to add Expense (Deficit)
+                    // We'll add it as a "Varios" expense or similar
+                    const cat = store.categories.find(c => c.name === 'Varios' || c.name === 'Otros') || store.categories[0];
+                    store.transactions.push({
+                        id: crypto.randomUUID(),
+                        date: date,
+                        categoryId: cat.id,
+                        category: cat.name,
+                        group: "Ajuste",
+                        description: "Ajuste Saldo Inicial (Negativo)",
+                        quantity: 1,
+                        unitValue: Math.abs(diff),
+                        total: Math.abs(diff),
+                        serviceId: ""
+                    });
+                }
+                App.save();
+                Swal.fire("Ajustado", `Se ha creado un ${diff > 0 ? 'Ingreso' : 'Gasto'} por $ ${Math.abs(diff).toLocaleString()} con fecha ${date} para cuadrar el saldo.`, "success");
+            },
+
+            saveSettings: () => {
+                // Settings are now saved individually by prompts or toggles
+                // This function might be called by legacy listeners, so we keep it safe or empty
+                App.save();
+                Swal.fire({ title: I18n.t('saved'), icon: 'success', timer: 1000, showConfirmButton: false });
+            },
+
+            save: async (skipRefresh = false) => {
+                await localforage.setItem('gastosApp_data', store); // Store object directly, no need for JSON.stringify
+                if (!skipRefresh) App.refreshAll();
+            },
+            refreshAll: () => {
+                UI.updateDashboard();
+                if (!document.getElementById('view-history').classList.contains('hidden-section')) UI.renderHistory();
+
+                // Only render config-heavy items if config view is open
+                if (!document.getElementById('view-config').classList.contains('hidden-section')) {
+                    UI.renderCategoriesSelect();
+                    UI.renderCategoriesConfig();
+                    UI.renderServicesConfig();
+                    UI.renderSettings();
+                }
+
+                // Reports
+                if (!document.getElementById('view-reportes').classList.contains('hidden-section')) UI.renderReports();
+            },
 
             factoryReset: () => {
-                Swal.fire({ title: I18n.t('confirm_reset'), text: I18n.t('warn_reset'), icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: I18n.t('btn_reset') }).then((r) => { if (r.isConfirmed) { localStorage.clear(); location.reload(); } });
+                Swal.fire({ title: I18n.t('confirm_reset'), text: I18n.t('warn_reset'), icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: I18n.t('btn_reset') }).then(async (r) => {
+                    if (r.isConfirmed) {
+                        await localforage.clear();
+                        localStorage.clear();
+                        location.reload();
+                    }
+                });
             },
 
             nav: (viewName) => {
@@ -591,20 +1170,126 @@
             },
 
             resetForm: () => {
-                state.editTxId = null; document.getElementById('form-add').reset();
+                state.editTxId = null; state.editIncId = null;
+                document.getElementById('form-add').reset();
                 document.getElementById('inp-date').value = new Date().toLocaleDateString('en-CA');
+                document.getElementById('form-add').reset();
+                state.editTxId = null; state.editIncId = null;
                 document.getElementById('inp-edit-id').value = "";
                 document.getElementById('form-title').innerText = I18n.t('reg_movement');
                 document.getElementById('btn-save-tx').innerText = I18n.t('save');
-                document.getElementById('btn-save-tx').classList.replace('bg-orange-500', 'bg-blue-600');
-                UI.updateGroupsAndServices(); UI.toggleDetailedMode();
+                // Use theme classes
+                document.getElementById('btn-save-tx').className = "w-full theme-bg-accent text-white font-bold py-3 rounded-lg shadow-lg hover:opacity-90 transition";
+
+                UI.updateGroupsAndServices();
+                // Ensure Simple Mode
+                document.getElementById('detailed-input').classList.add('hidden-section');
+                document.getElementById('simple-input').classList.remove('hidden-section');
+                document.getElementById('icon-detailed').className = "far fa-square mr-1";
+
+                UI.toggleAddTab('expense'); // Reset UI to expense
             },
+            saveTx: () => { App.saveTransaction(); },
+
+            linkHistory: (id) => {
+                const tx = store.transactions.find(t => t.id === id);
+                if (tx) UI.setHistoryType('expense');
+                else UI.setHistoryType('income'); // Fallback or if check logic needed
+
+                state.selectedTx.clear();
+                state.selectedTx.add(id);
+                App.nav('history');
+                setTimeout(() => {
+                    const row = document.getElementById(`row-${id}`);
+                    if (row) {
+                        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        row.classList.add('ring-2', 'ring-blue-500');
+                    }
+                }, 300);
+            },
+
+            saveTransaction: () => {
+                const isExp = document.getElementById('inp-type').value === 'expense';
+                if (isExp) App.saveTransactionLogic(); else App.saveIncome();
+            },
+
+            saveTransactionLogic: () => {
+                // ... logic ...
+                const desc = document.getElementById('inp-desc').value;
+                if (!desc) return Swal.fire(I18n.t('error'), I18n.t('err_desc_req'), 'error');
+
+                const date = document.getElementById('inp-date').value;
+                const catId = document.getElementById('inp-cat').value;
+                const group = document.getElementById('inp-group').value;
+                const serviceLink = document.getElementById('inp-service-link').value;
+
+                let total, quantity = 1, unitValue = 0;
+
+                // Check detailed mode
+                if (!document.getElementById('detailed-input').classList.contains('hidden-section')) {
+                    quantity = parseFloat(document.getElementById('inp-qty').value) || 0;
+                    unitValue = parseFloat(document.getElementById('inp-unit').value) || 0;
+                    total = quantity * unitValue;
+                } else {
+                    total = parseFloat(document.getElementById('inp-amount').value) || 0;
+                    unitValue = total;
+                }
+
+                if (total <= 0) return Swal.fire(I18n.t('error'), I18n.t('err_value_req'), 'error');
+
+                if (state.editTxId) {
+                    const tx = store.transactions.find(t => t.id === state.editTxId);
+                    if (tx) {
+                        tx.date = date; tx.description = desc; tx.total = total; tx.quantity = quantity; tx.unitValue = unitValue;
+                        tx.categoryId = catId; tx.category = store.categories.find(c => c.id === catId).name;
+                        tx.group = group; tx.serviceId = serviceLink || null;
+                        App.save();
+                        Swal.fire(I18n.t('saved'), I18n.t('msg_tx_updated'), 'success');
+                        App.resetForm(); App.nav('history');
+                    }
+                } else {
+                    store.transactions.push({
+                        id: crypto.randomUUID(),
+                        date, description: desc, total, quantity, unitValue,
+                        categoryId: catId, category: store.categories.find(c => c.id === catId).name,
+                        group, serviceId: serviceLink || null
+                    });
+                    App.save();
+                    Swal.fire(I18n.t('saved'), I18n.t('msg_tx_saved'), 'success');
+                    App.resetForm();
+                }
+            },
+
+            saveIncome: () => {
+                const desc = document.getElementById('inp-desc').value;
+                const total = parseFloat(document.getElementById('inp-amount').value) || 0;
+                const date = document.getElementById('inp-date').value;
+
+                if (!desc || total <= 0) return Swal.fire('Error', 'Descripción y valor requeridos', 'error');
+
+                if (state.editIncId) {
+                    const inc = store.incomes.find(i => i.id === state.editIncId);
+                    if (inc) {
+                        inc.date = date; inc.description = desc; inc.total = total;
+                        App.save();
+                        Swal.fire(I18n.t('saved'), 'Ingreso actualizado', 'success');
+                        App.resetForm(); App.nav('history');
+                    }
+                } else {
+                    store.incomes.push({ id: crypto.randomUUID(), date, description: desc, total });
+                    App.save();
+                    Swal.fire(I18n.t('saved'), 'Ingreso guardado', 'success');
+                    App.resetForm();
+                }
+            },
+
             discardForm: () => { App.resetForm(); App.nav('dashboard'); },
 
             payFromAlert: (serviceId) => {
                 const srv = store.recurringServices.find(s => s.id === serviceId);
                 if (!srv) return;
                 App.nav('add');
+                UI.toggleAddTab('expense');
                 document.getElementById('inp-date').value = new Date().toLocaleDateString('en-CA');
                 const parentCat = store.categories.find(c => c.groups.includes(srv.name));
                 if (parentCat) {
@@ -618,17 +1303,31 @@
             },
 
             saveTransaction: () => {
+                const type = document.getElementById('inp-type').value;
+                if (type === 'income') return App.saveIncome();
+
                 const id = state.editTxId;
                 const date = document.getElementById('inp-date').value;
                 const catId = document.getElementById('inp-cat').value;
                 const catName = catId ? document.getElementById('inp-cat').options[document.getElementById('inp-cat').selectedIndex].text : '';
-                const total = parseFloat(document.getElementById('inp-total').value);
 
-                if (!date || isNaN(total) || !catId) return Swal.fire('Error', I18n.t('error_missing_data'), 'error');
+                // Determine mode by checking visibility of detailed-input
+                const isDetailed = !document.getElementById('detailed-input').classList.contains('hidden-section');
 
-                const isDetailed = document.getElementById('toggle-detailed').checked;
-                const qty = isDetailed ? parseFloat(document.getElementById('inp-qty').value) : 1;
-                const unit = isDetailed ? parseFloat(document.getElementById('inp-unit').value) : total;
+                let total = 0;
+                let qty = 1;
+                let unit = 0;
+
+                if (isDetailed) {
+                    qty = parseFloat(document.getElementById('inp-qty').value) || 0;
+                    unit = parseFloat(document.getElementById('inp-unit').value) || 0;
+                    total = qty * unit;
+                } else {
+                    total = parseFloat(document.getElementById('inp-amount').value) || 0;
+                    unit = total;
+                }
+
+                if (!date || total <= 0 || !catId) return Swal.fire('Error', I18n.t('error_missing_data'), 'error');
 
                 const txObj = {
                     id: id || crypto.randomUUID(),
@@ -641,13 +1340,40 @@
 
                 if (id) { const idx = store.transactions.findIndex(t => t.id === id); if (idx !== -1) store.transactions[idx] = txObj; }
                 else { store.transactions.unshift(txObj); }
-                App.save(); App.discardForm();
+                App.save(true);
+                App.discardForm();
+                UI.updateDashboard();
+                Swal.fire({ title: I18n.t('saved'), icon: 'success', timer: 1000, showConfirmButton: false });
+            },
+
+            saveIncome: () => {
+                const id = state.editIncId;
+                const date = document.getElementById('inp-date').value;
+                const total = parseFloat(document.getElementById('inp-total').value);
+                const desc = document.getElementById('inp-desc').value;
+
+                if (!date || isNaN(total)) return Swal.fire('Error', I18n.t('error_missing_data'), 'error');
+
+                const incObj = {
+                    id: id || crypto.randomUUID(),
+                    date,
+                    description: desc || "Ingreso",
+                    total
+                };
+
+                if (id) { const idx = store.incomes.findIndex(i => i.id === id); if (idx !== -1) store.incomes[idx] = incObj; }
+                else { store.incomes.unshift(incObj); }
+                App.save(true); // Save but skip full refresh
+                App.discardForm();
+                UI.updateDashboard();
                 Swal.fire({ title: I18n.t('saved'), icon: 'success', timer: 1000, showConfirmButton: false });
             },
 
             editTransaction: (id) => {
                 const tx = store.transactions.find(t => t.id === id); if (!tx) return;
                 state.editTxId = id;
+                App.nav('add');
+                UI.toggleAddTab('expense'); // Force expense UI
                 document.getElementById('inp-edit-id').value = id;
                 document.getElementById('inp-date').value = tx.date;
                 document.getElementById('inp-cat').value = tx.categoryId;
@@ -655,22 +1381,79 @@
                 document.getElementById('inp-group').value = tx.group;
                 document.getElementById('inp-service-link').value = tx.serviceId || "";
                 document.getElementById('inp-desc').value = tx.description;
-                document.getElementById('toggle-detailed').checked = (tx.quantity > 1 || tx.unitValue !== tx.total);
+                // Set correct mode
+                const isDetailed = (tx.quantity > 1 || tx.unitValue !== tx.total);
+                const detailedDiv = document.getElementById('detailed-input');
+                const simpleDiv = document.getElementById('simple-input');
+                const icon = document.getElementById('icon-detailed');
+
+                if (isDetailed) {
+                    detailedDiv.classList.remove('hidden-section');
+                    simpleDiv.classList.add('hidden-section');
+                    icon.className = "far fa-check-square mr-1";
+                } else {
+                    detailedDiv.classList.add('hidden-section');
+                    simpleDiv.classList.remove('hidden-section');
+                    icon.className = "far fa-square mr-1";
+                }
+
                 document.getElementById('inp-qty').value = tx.quantity;
                 document.getElementById('inp-unit').value = tx.unitValue;
-                document.getElementById('inp-total').value = tx.total;
-                UI.toggleDetailedMode();
+                // inp-total is not an input, use inp-amount for simple value
+                document.getElementById('inp-amount').value = tx.total;
+
                 document.getElementById('form-title').innerText = I18n.t('edit_movement');
                 document.getElementById('btn-save-tx').innerText = I18n.t('update');
-                document.getElementById('btn-save-tx').classList.replace('bg-blue-600', 'bg-orange-500');
+                document.getElementById('btn-save-tx').className = "w-full bg-orange-500 text-white font-bold py-3 rounded-lg shadow-lg hover:bg-orange-600 transition";
+            },
+
+            editIncome: (id) => {
+                const inc = store.incomes.find(i => i.id === id); if (!inc) return;
+                state.editIncId = id;
                 App.nav('add');
+                UI.toggleAddTab('income');
+                document.getElementById('inp-edit-id').value = id;
+                document.getElementById('inp-date').value = inc.date;
+                document.getElementById('inp-desc').value = inc.description;
+                document.getElementById('inp-amount').value = inc.total;
+                document.getElementById('form-title').innerText = "Editar Ingreso";
+                document.getElementById('btn-save-tx').innerText = I18n.t('update');
+                document.getElementById('btn-save-tx').className = "w-full bg-orange-500 text-white font-bold py-3 rounded-lg shadow-lg hover:bg-orange-600 transition";
             },
 
             deleteTransaction: (id) => { Swal.fire({ title: I18n.t('delete') + '?', icon: 'warning', showCancelButton: true }).then(r => { if (r.isConfirmed) { store.transactions = store.transactions.filter(t => t.id !== id); App.save(); } }); },
             setSort: (k) => { state.historySort.dir = (state.historySort.key === k && state.historySort.dir === 'asc') ? 'desc' : 'asc'; state.historySort.key = k; UI.renderHistory(); },
-            toggleTxSelection: (id) => { if (state.selectedTx.has(id)) state.selectedTx.delete(id); else state.selectedTx.add(id); UI.updateHistoryHeader(); },
-            toggleSelectAll: (el) => { const v = UI.getCurrentHistoryIds(); if (el.checked) v.forEach(id => state.selectedTx.add(id)); else state.selectedTx.clear(); UI.renderHistory(); UI.updateHistoryHeader(); },
-            deleteSelected: () => { if (!state.selectedTx.size) return; Swal.fire({ title: I18n.t('confirm_delete_many', { n: state.selectedTx.size }), text: I18n.t('irreversible'), icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33' }).then(r => { if (r.isConfirmed) { store.transactions = store.transactions.filter(t => !state.selectedTx.has(t.id)); state.selectedTx.clear(); document.getElementById('chk-all').checked = false; App.save(); } }); },
+            editMovement: (id) => {
+                if (state.historyType === 'expense') App.editTransaction(id);
+                else App.editIncome(id);
+            },
+
+            toggleSelect: (id) => { if (state.selectedTx.has(id)) state.selectedTx.delete(id); else state.selectedTx.add(id); UI.renderHistory(); },
+            toggleSelectAll: (c) => {
+                state.selectedTx.clear();
+                if (c.checked) {
+                    const term = document.getElementById('search-history').value.toLowerCase();
+                    const data = state.historyType === 'expense' ?
+                        store.transactions.filter(t => (t.category || "").toLowerCase().includes(term) || t.description.toLowerCase().includes(term)) :
+                        store.incomes.filter(t => t.description.toLowerCase().includes(term));
+                    data.forEach(t => state.selectedTx.add(t.id));
+                }
+                UI.renderHistory();
+            },
+            deleteSelected: () => {
+                if (state.selectedTx.size === 0) return;
+                Swal.fire({ title: I18n.t('confirm_delete_many', { n: state.selectedTx.size }), text: I18n.t('irreversible'), icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: I18n.t('delete') }).then((r) => {
+                    if (r.isConfirmed) {
+                        if (state.historyType === 'expense') {
+                            store.transactions = store.transactions.filter(t => !state.selectedTx.has(t.id));
+                        } else {
+                            store.incomes = store.incomes.filter(i => !state.selectedTx.has(i.id));
+                        }
+                        state.selectedTx.clear(); App.save(); document.getElementById('chk-all').checked = false; UI.updateDashboard();
+                        Swal.fire({ title: I18n.t('msg_process_done'), icon: 'success', timer: 1000, showConfirmButton: false });
+                    }
+                });
+            },
             setReportRange: (m) => { const e = new Date(); const s = new Date(); if (m === 12) { s.setMonth(0); s.setDate(1); } else if (m === 1) s.setDate(1); else s.setMonth(s.getMonth() - m); document.getElementById('rpt-end').value = e.toLocaleDateString('en-CA'); document.getElementById('rpt-start').value = s.toLocaleDateString('en-CA'); UI.renderReports(); },
 
             addServicePrompt: async (eid = null) => {
@@ -729,6 +1512,69 @@
         };
 
         const UI = {
+            toggleAddTab: (type) => {
+                document.getElementById('inp-type').value = type;
+                const isExp = type === 'expense';
+
+                // Tabs styling
+                const tExp = document.getElementById('tab-add-expense');
+                const tInc = document.getElementById('tab-add-income');
+
+                if (isExp) {
+                    tExp.className = "flex-1 py-3 text-sm font-bold rounded-lg transition-all duration-300 theme-bg-accent text-white shadow-md";
+                    tExp.innerHTML = `<i class="fas fa-arrow-down mr-2"></i> ${I18n.t('tab_expense')}`;
+
+                    tInc.className = "flex-1 py-3 text-sm font-bold rounded-lg transition-all duration-300 theme-text-secondary hover:bg-gray-100";
+                    tInc.innerHTML = `<i class="fas fa-arrow-up mr-2"></i> ${I18n.t('tab_income')}`;
+                } else {
+                    tExp.className = "flex-1 py-3 text-sm font-bold rounded-lg transition-all duration-300 theme-text-secondary hover:bg-gray-100";
+                    tExp.innerHTML = `<i class="fas fa-arrow-down mr-2"></i> ${I18n.t('tab_expense')}`;
+
+                    tInc.className = "flex-1 py-3 text-sm font-bold rounded-lg transition-all duration-300 theme-bg-accent text-white shadow-md";
+                    tInc.innerHTML = `<i class="fas fa-arrow-up mr-2"></i> ${I18n.t('tab_income')}`;
+                }
+
+                // Visibility
+                document.getElementById('form-expense-section').classList.toggle('hidden-section', !isExp);
+                document.getElementById('div-toggle-mode').classList.toggle('hidden-section', !isExp);
+
+                // For income, always show simple input, hide detailed
+                if (!isExp) {
+                    document.getElementById('simple-input').classList.remove('hidden-section');
+                    document.getElementById('detailed-input').classList.add('hidden-section');
+                }
+
+                // Update Save Button to match theme
+                document.getElementById('btn-save-tx').className = "w-full theme-bg-accent text-white font-bold py-3 rounded-lg shadow-lg hover:opacity-90 transition";
+            },
+
+            toggleDetailedMode: () => {
+                const detailedDiv = document.getElementById('detailed-input');
+                const simpleDiv = document.getElementById('simple-input');
+                const icon = document.getElementById('icon-detailed');
+
+                const isHidden = detailedDiv.classList.contains('hidden-section');
+
+                if (isHidden) {
+                    detailedDiv.classList.remove('hidden-section');
+                    simpleDiv.classList.add('hidden-section');
+                    icon.className = "far fa-check-square mr-1";
+                } else {
+                    detailedDiv.classList.add('hidden-section');
+                    simpleDiv.classList.remove('hidden-section');
+                    icon.className = "far fa-square mr-1";
+                }
+            },
+
+            calcTotal: () => {
+                const qty = parseFloat(document.getElementById('inp-qty').value) || 0;
+                const unit = parseFloat(document.getElementById('inp-unit').value) || 0;
+                const total = qty * unit;
+                document.getElementById('lbl-total-calc').innerText = "$ " + total.toLocaleString();
+            },
+
+            discardForm: () => { App.discardForm(); },
+
             renderCategoriesSelect: () => { const s = document.getElementById('inp-cat'); s.innerHTML = `<option value="">${I18n.t('select_option')}</option>`; store.categories.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.text = c.name; s.appendChild(o) }); },
 
             updateGroupsAndServices: () => {
@@ -768,12 +1614,54 @@
                 }
             },
 
-            toggleDetailedMode: () => { const d = document.getElementById('toggle-detailed').checked; document.getElementById('detailed-inputs').classList.toggle('hidden-section', !d); document.getElementById('inp-total').readOnly = d; document.getElementById('inp-total').classList.toggle('bg-gray-100', d); },
-            calcTotal: () => { document.getElementById('inp-total').value = (parseFloat(document.getElementById('inp-qty').value) || 0) * (parseFloat(document.getElementById('inp-unit').value) || 0); },
+
             toggleConfigSection: (id) => document.getElementById(id).classList.toggle('hidden-section'),
-            renderServicesConfig: () => { const l = document.getElementById('list-services-cfg'); l.innerHTML = ""; store.recurringServices.forEach(s => { const ft = I18n.t(`freq_${s.frequency.toLowerCase()}`); l.innerHTML += `<div class="flex justify-between bg-white p-2 border mb-1 rounded text-sm"><div><b>${s.name}</b> <span class="text-xs text-gray-400">(${ft})</span></div><div><button onclick="App.addServicePrompt('${s.id}')" class="text-blue-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="App.deleteService('${s.id}')" class="text-red-500"><i class="fas fa-trash"></i></button></div></div>` }) },
-            renderCategoriesConfig: () => { const l = document.getElementById('list-cats-cfg'); l.innerHTML = ""; store.categories.forEach(c => { l.innerHTML += `<div class="flex justify-between bg-white p-2 border mb-1 rounded text-sm"><b>${c.name}</b><div><button onclick="App.CategoryManager.edit('${c.id}')" class="text-purple-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="App.CategoryManager.delete('${c.id}')" class="text-red-500"><i class="fas fa-trash"></i></button></div></div>` }) },
+            toggleConfigSection: (id) => document.getElementById(id).classList.toggle('hidden-section'),
+            renderServicesConfig: () => { const l = document.getElementById('list-services-cfg'); l.innerHTML = ""; store.recurringServices.forEach(s => { const ft = I18n.t(`freq_${s.frequency.toLowerCase()}`); l.innerHTML += `<div class="flex justify-between theme-bg-card p-3 border theme-border mb-2 rounded-xl text-sm shadow-sm theme-text-primary"><div><b class="theme-text-primary">${s.name}</b> <span class="text-xs theme-text-secondary opacity-70">(${ft})</span></div><div><button onclick="App.addServicePrompt('${s.id}')" class="text-blue-500 mr-3 hover:scale-110 transition"><i class="fas fa-edit"></i></button><button onclick="App.deleteService('${s.id}')" class="text-red-500 hover:scale-110 transition"><i class="fas fa-trash"></i></button></div></div>` }) },
+            renderCategoriesConfig: () => { const l = document.getElementById('list-cats-cfg'); l.innerHTML = ""; store.categories.forEach(c => { l.innerHTML += `<div class="flex justify-between theme-bg-card p-3 border theme-border mb-2 rounded-xl text-sm shadow-sm theme-text-primary"><b class="theme-text-primary">${c.name}</b><div><button onclick="App.CategoryManager.edit('${c.id}')" class="text-purple-500 mr-3 hover:scale-110 transition"><i class="fas fa-edit"></i></button><button onclick="App.CategoryManager.delete('${c.id}')" class="text-red-500 hover:scale-110 transition"><i class="fas fa-trash"></i></button></div></div>` }) },
+            ThemeManager: {
+                themes: ['green', 'blue', 'contrast'],
+                current: 'green',
+                init: () => {
+                    const saved = localStorage.getItem('gastosApp_theme') || 'green';
+                    UI.ThemeManager.set(saved);
+                },
+                toggle: () => {
+                    const idx = UI.ThemeManager.themes.indexOf(UI.ThemeManager.current);
+                    const next = UI.ThemeManager.themes[(idx + 1) % UI.ThemeManager.themes.length];
+                    UI.ThemeManager.set(next);
+                },
+                set: (themeName) => {
+                    UI.ThemeManager.current = themeName;
+                    document.documentElement.setAttribute('data-theme', themeName);
+                    localStorage.setItem('gastosApp_theme', themeName);
+
+                    // Specific tweaks for Tailwind classes that are hard to override with variables alone
+                    // but we are using CSS variables for key areas now.
+                }
+            },
+
             CategoryEditor: { addGroupInput: (v) => { const d = document.createElement('div'); d.className = "flex gap-2 mb-1"; d.innerHTML = `<input class="cat-group-input w-full border rounded p-1 text-sm" value="${v}"><button type="button" onclick="this.parentElement.remove()" class="text-red-400">X</button>`; document.getElementById('edit-cat-groups-list').appendChild(d) } },
+
+            setHistoryType: (type) => {
+                state.historyType = type;
+                state.selectedTx.clear();
+                document.getElementById('chk-all').checked = false;
+
+                // Update Button Styles
+                const btnExp = document.getElementById('btn-hist-expense');
+                const btnInc = document.getElementById('btn-hist-income');
+
+                if (type === 'expense') {
+                    btnExp.className = "flex-1 py-1 text-sm font-bold rounded-md shadow-sm bg-white text-blue-600 transition";
+                    btnInc.className = "flex-1 py-1 text-sm font-bold rounded-md text-gray-500 hover:bg-gray-300 transition";
+                } else {
+                    btnExp.className = "flex-1 py-1 text-sm font-bold rounded-md text-gray-500 hover:bg-gray-300 transition";
+                    btnInc.className = "flex-1 py-1 text-sm font-bold rounded-md shadow-sm bg-white text-green-600 transition";
+                }
+
+                UI.renderHistory();
+            },
 
             renderDeepFilters: () => {
                 const cCont = document.getElementById('filter-cats-container');
@@ -828,12 +1716,31 @@
             },
 
             updateDashboard: () => {
+                // Balance Calculation
+                const totalInc = (store.incomes || []).reduce((s, i) => s + i.total, 0);
+                const totalExp = store.transactions.reduce((s, t) => s + t.total, 0);
+                const balance = totalInc - totalExp;
+
+                const balEl = document.getElementById('dash-balance');
+                balEl.innerText = "$ " + balance.toLocaleString();
+
+                const th = store.settings.balanceThresholds || { min: 0, mid: 0 };
+                balEl.className = "text-4xl font-bold mt-2 transition-colors duration-500";
+                if (balance < th.min) balEl.classList.add('text-red-500');
+                else if (balance < th.mid) balEl.classList.add('text-orange-500');
+                else balEl.classList.add('text-green-500');
+
+                document.getElementById('dash-total-inc').innerText = "$ " + totalInc.toLocaleString();
+                document.getElementById('dash-total-exp').innerText = "$ " + totalExp.toLocaleString();
+
+                // Current Month Logic
                 const now = new Date();
                 const prefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
                 const mTx = store.transactions.filter(t => t.date.startsWith(prefix));
                 document.getElementById('dash-total').innerText = "$ " + mTx.reduce((s, t) => s + t.total, 0).toLocaleString();
                 document.getElementById('dash-count').innerText = `${mTx.length}`;
 
+                // Alerts Logic
                 const al = document.getElementById('alerts-list'); al.innerHTML = ""; let has = false;
 
                 store.recurringServices.forEach(s => {
@@ -851,42 +1758,117 @@
                                     <div><b>${s.name}</b> <span class="text-[10px] text-gray-500 block">${I18n.t('lbl_vence_day', { n: s.cutoffDay })}</span></div>
                                     <div class="text-red-600 font-bold text-xs">${diff < 0 ? I18n.t('lbl_vencido') : I18n.t('lbl_pay')} <i class="fas fa-chevron-right ml-1"></i></div>
                                 </div>`;
-
-                                // Trigger System Notification
                                 NotificationManager.schedule(s, diff);
                             }
                         }
                     }
                 });
                 document.getElementById('dash-alerts-container').classList.toggle('hidden-section', !has);
+
+                // Render Dashboard History (Last 5)
+                const dList = document.getElementById('dash-history-list');
+                if (dList) {
+                    dList.innerHTML = "";
+                    const last5 = store.transactions.slice(0, 5); // Assumes already sorted by date desc by default entry? No, we should sort? usually appended.
+                    // Let's sort simply by date desc
+                    const sorted = [...store.transactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+
+                    if (sorted.length === 0) {
+                        dList.innerHTML = `<div class="text-center text-xs theme-text-muted italic py-4">Sin movimientos recientes</div>`;
+                    } else {
+                        sorted.forEach(t => {
+                            dList.innerHTML += `
+                                <div class="theme-bg-card p-3 rounded-xl shadow-sm border theme-border flex justify-between items-center cursor-pointer hover:bg-gray-50 transition" onclick="App.linkHistory('${t.id}')">
+                                    <div class="flex items-center gap-3">
+                                        <div class="theme-bg-accent-light w-8 h-8 rounded-full flex items-center justify-center theme-text-accent-dark text-xs font-bold">
+                                            <i class="fas ${t.categoryId ? 'fa-shopping-bag' : 'fa-money-bill-wave'}"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs font-bold theme-text-primary">${t.description || "Gasto"}</p>
+                                            <p class="text-[10px] theme-text-secondary">${t.date}</p>
+                                        </div>
+                                    </div>
+                                    <span class="text-sm font-bold theme-text-primary">$ ${t.total.toLocaleString()}</span>
+                                </div>
+                            `;
+                        });
+                    }
+                }
             },
 
-            getCurrentHistoryIds: () => { const term = document.getElementById('search-history').value.toLowerCase(); return store.transactions.filter(t => (t.category || "").toLowerCase().includes(term) || t.description.toLowerCase().includes(term)).map(t => t.id); },
+            renderSettings: () => {
+                // No remaining DOM elements to render in Config view for thresholds
+            },
+
+            getCurrentHistoryIds: () => {
+                const term = document.getElementById('search-history').value.toLowerCase();
+                if (state.historyType === 'expense') {
+                    return store.transactions.filter(t => (t.category || "").toLowerCase().includes(term) || t.description.toLowerCase().includes(term)).map(t => t.id);
+                } else {
+                    return store.incomes.filter(t => t.description.toLowerCase().includes(term)).map(t => t.id);
+                }
+            },
 
             renderHistory: () => {
+                const isHidden = document.getElementById('view-history').classList.contains('hidden-section');
+                if (isHidden) return;
+
                 const l = document.getElementById('history-list'); l.innerHTML = '';
                 const term = document.getElementById('search-history').value.toLowerCase();
-                let data = store.transactions.filter(t => (t.category || "").toLowerCase().includes(term) || t.description.toLowerCase().includes(term));
+                const isExp = state.historyType === 'expense';
 
-                state.filteredCount = data.length;
+                let data = isExp ? store.transactions : store.incomes;
 
-                const k = state.historySort.key; const d = state.historySort.dir === 'asc' ? 1 : -1;
-                data.sort((a, b) => (a[k] || "") < (b[k] || "") ? -1 * d : 1 * d);
+                if (isExp) {
+                    data = data.filter(t => (t.category || "").toLowerCase().includes(term) || t.description.toLowerCase().includes(term));
+                } else {
+                    data = data.filter(t => t.description.toLowerCase().includes(term));
+                }
 
-                ['date', 'category', 'group'].forEach(key => document.getElementById(`sort-icon-${key}`).className = `fas fa-sort${state.historySort.key === key ? '-' + (state.historySort.dir === 'asc' ? 'up' : 'down') : ''} ml-1`);
-                const allVisibleSelected = data.length > 0 && data.slice(0, 50).every(t => state.selectedTx.has(t.id));
-                document.getElementById('chk-all').checked = allVisibleSelected;
+                data = data.sort((a, b) => {
+                    let va = a[state.historySort.key] || ""; let vb = b[state.historySort.key] || "";
+                    if (state.historySort.key === 'total' || state.historySort.key === 'quantity') { va = parseFloat(va); vb = parseFloat(vb); }
+                    if (state.historySort.dir === 'asc') return va > vb ? 1 : -1;
+                    return va < vb ? 1 : -1;
+                });
 
-                UI.updateHistoryHeader();
+                document.getElementById('history-counter').innerText = `(${data.length})`;
+                document.getElementById('actions-history').classList.toggle('hidden-section', state.selectedTx.size === 0);
 
                 const limit = 50;
                 const visibleData = data.slice(0, limit);
 
                 visibleData.forEach(t => {
+                    const row = document.createElement('div');
+                    row.id = `row-${t.id}`;
+                    // Theme aware row
+                    row.className = `theme-bg-card p-3 rounded-xl shadow-sm border-l-4 ${isExp ? 'border-red-400' : 'border-green-400'} flex items-center justify-between mb-2 theme-border animate-fade transition-colors duration-500`;
+
+                    if (state.selectedTx.has(t.id)) row.classList.add('bg-yellow-50', 'ring-2', 'ring-yellow-400');
+
                     const isSel = state.selectedTx.has(t.id);
-                    l.innerHTML += `<div class="bg-white p-2 rounded shadow flex items-center gap-3 border-l-4 ${isSel ? 'border-green-500 bg-green-50' : 'border-blue-500'}"><input type="checkbox" class="checkbox-std" ${isSel ? 'checked' : ''} onchange="App.toggleTxSelection('${t.id}')"><div class="flex-1 overflow-hidden"><div class="flex justify-between"><span class="font-bold text-sm truncate">${t.category} - ${t.group}</span><span class="font-bold text-sm">$ ${t.total.toLocaleString()}</span></div><div class="flex justify-between mt-1"><span class="text-xs text-gray-400">${t.date} • ${t.description}</span><button onclick="App.editTransaction('${t.id}')" class="text-orange-400 text-xs"><i class="fas fa-pencil-alt"></i></button></div></div></div>`;
+
+                    let html = `
+                    <div class="flex items-center gap-3 w-full">
+                        <input type="checkbox" onchange="App.toggleSelect('${t.id}')" class="checkbox-std w-5 h-5 accent-green-600" ${isSel ? 'checked' : ''}>
+                        <div class="flex-1 cursor-pointer" onclick="App.editMovement('${t.id}')">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold theme-text-primary text-sm">${t.description || I18n.t('no_desc')}</span>
+                                <span class="font-bold ${isExp ? 'text-red-500' : 'text-green-500'}">$ ${t.total.toLocaleString()}</span>
+                            </div>
+                            <div class="flex justify-between text-xs theme-text-secondary opacity-75 mt-1">
+                                <span>${t.date}</span>
+                                <span>${isExp ? (t.category + (t.group ? ' > ' + t.group : '')) : I18n.t('lbl_h_incomes')}</span>
+                            </div>
+                        </div>
+                    </div>`;
+                    row.innerHTML = html;
+                    l.appendChild(row);
                 });
-                if (data.length > limit) l.innerHTML += `<div class="text-center text-xs text-gray-400 mt-4 italic">Mostrando últimos ${limit} de ${data.length}. Usa el buscador.</div>`;
+
+                if (data.length > limit) {
+                    l.innerHTML += `<div class="text-center text-xs theme-text-muted mt-4 italic">Mostrando últimos ${limit} de ${data.length}</div>`;
+                }
             },
 
 
@@ -929,7 +1911,7 @@
                 const ctx = document.getElementById('chart-main').getContext('2d'); if (state.reportChart) state.reportChart.destroy();
                 const isTrend = (diffTime / (1000 * 60 * 60 * 24)) > 35;
                 let data = {}; let options = { responsive: true, maintainAspectRatio: false, plugins: {} };
-                const totalLabelsPlugin = { id: 'totalLabels', afterDatasetsDraw: (chart) => { if (chart.config.type !== 'bar') return; const { ctx, scales: { x, y } } = chart; ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.font = 'bold 10px "Segoe UI", sans-serif'; ctx.fillStyle = '#4b5563'; const dsCount = chart.data.datasets.length; if (dsCount === 0) return; const dataLen = chart.data.datasets[0].data.length; for (let i = 0; i < dataLen; i++) { let s = 0; let highestY = y.getPixelForValue(0); for (let d = 0; d < dsCount; d++) { const v = chart.data.datasets[d].data[i]; s += v; const meta = chart.getDatasetMeta(d); if (!meta.hidden && meta.data[i] && meta.data[i].y < highestY) highestY = meta.data[i].y; } if (s > 0) { const xPos = x.getPixelForValue(chart.data.labels[i]); ctx.fillText("$ " + Math.round(s).toLocaleString(), xPos, highestY - 5); } } ctx.restore(); } };
+                const totalLabelsPlugin = { id: 'totalLabels', afterDatasetsDraw: (chart) => { if (chart.config.type !== 'bar') return; const { ctx, scales: { x, y } } = chart; ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.font = 'bold 10px "Segoe UI", sans-serif'; ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim() || '#4b5563'; const dsCount = chart.data.datasets.length; if (dsCount === 0) return; const dataLen = chart.data.datasets[0].data.length; for (let i = 0; i < dataLen; i++) { let s = 0; let highestY = y.getPixelForValue(0); for (let d = 0; d < dsCount; d++) { const v = chart.data.datasets[d].data[i]; s += v; const meta = chart.getDatasetMeta(d); if (!meta.hidden && meta.data[i] && meta.data[i].y < highestY) highestY = meta.data[i].y; } if (s > 0) { const xPos = x.getPixelForValue(chart.data.labels[i]); ctx.fillText("$ " + Math.round(s).toLocaleString(), xPos, highestY - 5); } } ctx.restore(); } };
                 if (type === 'doughnut' || (!isTrend && type === 'bar')) {
                     const uniqueCats = [...new Set(filtered.map(t => t.category))];
                     const useGroups = uniqueCats.length === 1;
@@ -1001,29 +1983,78 @@
                     try {
                         const text = e.target.result; const lines = text.split('\n'); let count = 0;
                         const catMap = {}; store.categories.forEach(c => catMap[c.name] = c.id);
+
                         for (let i = 1; i < lines.length; i++) {
                             const line = lines[i].trim(); if (!line) continue;
-                            const cols = line.split(';'); if (cols.length < 7) continue;
-                            let [fecha, catNombre, grupo, desc, cant, unit, total] = cols;
-                            const cleanNum = (v) => parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
-                            let catId = catMap[catNombre];
-                            if (!catId) { const fallback = store.categories.find(c => c.name === 'Varios' || c.name === 'Otros'); catId = fallback ? fallback.id : store.categories[0].id; }
+                            const cols = line.split(';');
+                            if (cols.length < 7) continue;
+
+                            let type = 'GASTO';
+                            let fecha, catNombre, grupo, desc, cant, unit, total;
+
+                            // Heuristic to detect new format: Check if 2nd col is GASTO or INGRESO
+                            if (cols.length >= 8 && (cols[1] === 'GASTO' || cols[1] === 'INGRESO')) {
+                                [fecha, type, catNombre, grupo, desc, cant, unit, total] = cols;
+                            } else {
+                                // Old format fallback
+                                [fecha, catNombre, grupo, desc, cant, unit, total] = cols;
+                            }
+
+                            const cleanNum = (v) => parseFloat((v || "0").replace(/\./g, '').replace(',', '.')) || 0;
                             let dateISO = fecha;
                             if (fecha.includes('/')) { const parts = fecha.split('/'); if (parts.length === 3) dateISO = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`; }
-                            store.transactions.push({ id: crypto.randomUUID(), date: dateISO, categoryId: catId, category: catNombre, group: grupo, description: desc.replace(/"/g, ''), quantity: cleanNum(cant), unitValue: cleanNum(unit), total: cleanNum(total), serviceId: "" });
+
+                            if (type === 'INGRESO') {
+                                store.incomes.push({
+                                    id: crypto.randomUUID(),
+                                    date: dateISO,
+                                    description: desc.replace(/"/g, ''),
+                                    total: cleanNum(total)
+                                });
+                            } else {
+                                let catId = catMap[catNombre];
+                                if (!catId) { const fallback = store.categories.find(c => c.name === 'Varios' || c.name === 'Otros'); catId = fallback ? fallback.id : store.categories[0].id; }
+                                store.transactions.push({
+                                    id: crypto.randomUUID(),
+                                    date: dateISO,
+                                    categoryId: catId,
+                                    category: catNombre,
+                                    group: grupo,
+                                    description: desc.replace(/"/g, ''),
+                                    quantity: cleanNum(cant) || 1,
+                                    unitValue: cleanNum(unit) || cleanNum(total),
+                                    total: cleanNum(total),
+                                    serviceId: ""
+                                });
+                            }
                             count++;
                         }
-                        localStorage.setItem('gastosApp_data', JSON.stringify(store));
+                        App.save();
                         Swal.fire({ title: I18n.t('msg_imported_csv', { n: count }), icon: 'success' }).then(() => location.reload());
-                    } catch (err) { Swal.fire('Error', I18n.t('err_csv_invalid'), 'error'); }
+                    } catch (err) { console.error(err); Swal.fire('Error', I18n.t('err_csv_invalid'), 'error'); }
                 };
                 reader.readAsText(file, "ISO-8859-1");
             },
-            exportSelected: async () => { const sel = store.transactions.filter(t => state.selectedTx.has(t.id)); if (sel.length) await BackupManager.generateCSV(sel, "seleccion.csv"); state.selectedTx.clear(); document.getElementById('chk-all').checked = false; UI.renderHistory(); UI.updateHistoryHeader(); },
+            exportSelected: async () => {
+                const selTx = store.transactions.filter(t => state.selectedTx.has(t.id));
+                if (selTx.length) await BackupManager.generateCSV(selTx, "seleccion.csv");
+                state.selectedTx.clear(); document.getElementById('chk-all').checked = false; UI.renderHistory(); UI.updateHistoryHeader();
+            },
             generateCSV: async (d, fname = "export.csv") => {
                 if (!d || !d.length) return Swal.fire('Info', I18n.t('err_no_export'), 'info');
-                let csv = I18n.t('csv_header') + "\n";
-                d.forEach(t => csv += `${t.date};${t.category};${t.group};"${(t.description || "").replace(/;/g, ",")}";${t.quantity};${t.unitValue};${t.total};${t.serviceId ? I18n.t('csv_type_recurring') : I18n.t('csv_type_expense')}\n`);
+                let csv = "Fecha;Tipo;Categoría;Grupo;Descripción;Cantidad;Valor Unitario;Total;Recurrente\n";
+                d.forEach(t => {
+                    const isInc = !t.categoryId; // Income doesn't have categoryId
+                    const type = isInc ? 'INGRESO' : 'GASTO';
+                    const cat = isInc ? '' : t.category;
+                    const grp = isInc ? '' : t.group;
+                    const desc = (t.description || "").replace(/;/g, ",");
+                    const qty = isInc ? 1 : (t.quantity || 1);
+                    const unit = isInc ? t.total : (t.unitValue || t.total);
+                    const rec = isInc ? '' : (t.serviceId ? I18n.t('csv_type_recurring') : I18n.t('csv_type_expense'));
+
+                    csv += `${t.date};${type};${cat};${grp};"${desc}";${qty};${unit};${t.total};${rec}\n`;
+                });
                 try {
                     if (window.Capacitor) {
                         const r = await Capacitor.Plugins.Filesystem.writeFile({ path: fname, data: csv, directory: 'CACHE', encoding: 'utf8' });
