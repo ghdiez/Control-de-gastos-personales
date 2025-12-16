@@ -654,13 +654,17 @@
                     <option value="bar" data-i18n="chart_bar">Barras (Total Mensual)</option>
                     <option value="grouped" data-i18n="chart_grouped">Barras Agrupadas (Comparativo)</option>
                     <option value="stacked" data-i18n="chart_stacked">Barras Apiladas</option>
-                    <option value="line" data-i18n="chart_line">Línea Tendencia</option>
+                    <option value="multiline" data-i18n="chart_multiline">Líneas Comparativas (Grupos)</option>
                     <option value="doughnut" data-i18n="chart_doughnut">Torta (Total)</option>
                 </select>
+                <button onclick="App.showPivotTable()" class="btn-primary w-full mt-3 text-sm py-2"><i
+                        class="fas fa-table mr-2"></i><span data-i18n="btn_pivot">Tabla Dinámica</span></button>
             </div>
         </div>
-        <div class="theme-bg-card rounded-2xl shadow-lg p-3 mb-4 h-72 border theme-border"><canvas
-                id="chart-main"></canvas></div>
+        <div class="theme-bg-card rounded-2xl shadow-lg p-3 mb-4 border theme-border">
+            <div class="h-64"><canvas id="chart-main"></canvas></div>
+            <div id="chart-legend" class="flex flex-wrap gap-2 justify-center mt-2 min-h-[20px]"></div>
+        </div>
         <div class="theme-bg-card rounded-2xl shadow-lg p-4 mb-6 border theme-border">
             <div class="flex justify-between items-center"><span class="text-xs theme-text-muted font-bold uppercase"
                     data-i18n="total_period">Total Periodo:</span><span class="text-xl font-bold theme-text-primary"
@@ -844,7 +848,7 @@
 
             <div class="text-center mt-8 border-t theme-border pt-4">
                 <p class="font-bold theme-text-primary text-sm">SmartFinance App</p>
-                <p class="text-xs theme-text-muted">Versión 1.1.0</p>
+                <p class="text-xs theme-text-muted">Versión 1.1.2</p>
                 <p class="text-[10px] theme-text-muted mt-2">© GabHoX - ghdiez.01@gmail.com - 2025</p>
             </div>
         </div>
@@ -1057,14 +1061,31 @@
             },
 
             showGuide: () => {
-                // Fetch the content from the hidden view-help section
-                const content = document.getElementById('view-help').innerHTML;
+                const content = `
+                    <div class="text-left text-sm space-y-4 px-1">
+                        <div><h3 class="font-bold theme-text-primary text-base mb-1">${I18n.t('help_reg_title')}</h3><p class="text-gray-600 leading-tight">${I18n.t('help_reg_text')}</p></div>
+                        <div><h3 class="font-bold theme-text-primary text-base mb-1">${I18n.t('help_cats_title')}</h3><p class="text-gray-600 leading-tight">${I18n.t('help_cats_text')}</p></div>
+                        <div><h3 class="font-bold theme-text-primary text-base mb-1">${I18n.t('help_alerts_title')}</h3><p class="text-gray-600 leading-tight">${I18n.t('help_alerts_text')}</p></div>
+                        <div><h3 class="font-bold theme-text-primary text-base mb-1">${I18n.t('help_sys_title')}</h3><p class="text-gray-600 leading-tight">${I18n.t('help_sys_text')}</p></div>
+                        <div class="p-2 bg-blue-50 rounded-lg border border-blue-100">
+                            <h3 class="font-bold text-blue-800 text-base mb-1"><i class="fas fa-chart-pie mr-1"></i>${I18n.t('help_reports_title')}</h3>
+                            <p class="text-blue-700 leading-tight text-xs">${I18n.t('help_reports_text')}</p>
+                        </div>
+                        <div class="p-2 bg-green-50 rounded-lg border border-green-100">
+                            <h3 class="font-bold text-green-800 text-base mb-1"><i class="fas fa-table mr-1"></i>${I18n.t('help_pivot_title')}</h3>
+                            <p class="text-green-700 leading-tight text-xs">${I18n.t('help_pivot_text')}</p>
+                        </div>
+                        <div><h3 class="font-bold theme-text-primary text-base mb-1">${I18n.t('help_backup_title')}</h3><p class="text-gray-600 leading-tight">${I18n.t('help_backup_text')}</p></div>
+                    </div>
+                `;
                 Swal.fire({
-                    html: `<div class="text-left max-h-[70vh] overflow-y-auto">${content}</div>`,
-                    width: '90%',
+                    title: I18n.t('menu_help'),
+                    html: `<div class="max-h-[60vh] overflow-y-auto">${content}</div>`,
+                    width: '95%',
                     showCloseButton: true,
-                    showConfirmButton: false,
-                    customClass: { popup: 'rounded-2xl' }
+                    showConfirmButton: true,
+                    confirmButtonText: I18n.t('btn_close'),
+                    customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl' }
                 });
             },
 
@@ -1623,6 +1644,125 @@
                 UI.renderCategoriesSelect();
             },
 
+            showPivotTable: () => {
+                const start = document.getElementById('rpt-start').value; const end = document.getElementById('rpt-end').value;
+                if (!start || !end) return Swal.fire('Error', I18n.t('err_fill_all'), 'error');
+
+                // Filter Data
+                let filtered = store.transactions.filter(t => t.date >= start && t.date <= end);
+                if (state.filterCats.size > 0) filtered = filtered.filter(t => state.filterCats.has(t.categoryId));
+                if (state.filterGroups.size > 0) filtered = filtered.filter(t => state.filterGroups.has(t.group));
+
+                // Define Render Function
+                const renderPivot = (rowsType, colsType) => {
+                    const container = document.getElementById('pivot-container');
+                    if (!container) return;
+
+                    // Logic to build Matrix
+                    const matrix = {};
+                    const rowKeys = new Set();
+                    const colKeys = new Set();
+                    const rowTotals = {};
+                    const colTotals = {};
+                    let totalGrand = 0;
+
+                    // Determine Key Getter
+                    const getKey = (item, type) => {
+                        if (type === 'cat') return item.category || "Otro";
+                        if (type === 'group') return item.group || "General";
+                        if (type === 'month') return item.date.substring(0, 7);
+                        if (type === 'date') return item.date;
+                        return "Total"; // fallback for single column
+                    };
+
+                    filtered.forEach(t => {
+                        const rK = getKey(t, rowsType);
+                        const cK = getKey(t, colsType);
+
+                        rowKeys.add(rK);
+                        colKeys.add(cK);
+
+                        if (!matrix[rK]) matrix[rK] = {};
+                        matrix[rK][cK] = (matrix[rK][cK] || 0) + t.total;
+
+                        rowTotals[rK] = (rowTotals[rK] || 0) + t.total;
+                        colTotals[cK] = (colTotals[cK] || 0) + t.total;
+                        totalGrand += t.total;
+                    });
+
+                    const sortedRows = [...rowKeys].sort();
+                    const sortedCols = [...colKeys].sort();
+
+                    let html = `<div style="overflow-x:auto;"><table class="w-full text-xs border-collapse">`;
+                    // Header
+                    html += `<thead class="bg-gray-100 text-gray-700"><tr><th class="p-2 border text-left font-bold capitalize">${I18n.t('axis_' + rowsType) || rowsType} / ${I18n.t('axis_' + colsType) || colsType}</th>`;
+                    sortedCols.forEach(c => html += `<th class="p-2 border text-right font-bold whitespace-nowrap">${c}</th>`);
+                    html += `<th class="p-2 border text-right font-bold">Total</th></tr></thead><tbody>`;
+
+                    // Rows
+                    sortedRows.forEach(r => {
+                        html += `<tr><td class="p-2 border font-bold text-gray-700 bg-gray-50">${r}</td>`;
+                        sortedCols.forEach(c => {
+                            const val = matrix[r][c] || 0;
+                            html += `<td class="p-2 border text-right text-gray-600">${val > 0 ? '$ ' + val.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}</td>`;
+                        });
+                        html += `<td class="p-2 border text-right font-bold text-black bg-gray-50">$ ${(rowTotals[r] || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td></tr>`;
+                    });
+
+                    // Footer
+                    html += `<tr class="bg-gray-100 font-bold"><td class="p-2 border text-right">Total</td>`;
+                    sortedCols.forEach(c => {
+                        html += `<td class="p-2 border text-right">$ ${(colTotals[c] || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>`;
+                    });
+                    html += `<td class="p-2 border text-right">$ ${totalGrand.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td></tr>`;
+
+                    html += `</tbody></table></div>`;
+                    container.innerHTML = html;
+                };
+
+                Swal.fire({
+                    title: I18n.t('btn_pivot'),
+                    html: `
+                    <div class="flex gap-2 mb-4 justify-center text-sm">
+                        <div class="flex flex-col text-left">
+                            <label class="font-bold text-xs theme-text-muted mb-1">${I18n.t('pivot_rows')}</label>
+                            <select id="pivot-row-select" class="swal2-select m-0 text-xs py-1">
+                                <option value="cat" selected>${I18n.t('axis_cat')}</option>
+                                <option value="group">${I18n.t('axis_group')}</option>
+                                <option value="month">${I18n.t('axis_month')}</option>
+                                <option value="date">${I18n.t('axis_date')}</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col text-left">
+                            <label class="font-bold text-xs theme-text-muted mb-1">${I18n.t('pivot_cols')}</label>
+                            <select id="pivot-col-select" class="swal2-select m-0 text-xs py-1">
+                                <option value="month" selected>${I18n.t('axis_month')}</option>
+                                <option value="group">${I18n.t('axis_group')}</option>
+                                <option value="cat">${I18n.t('axis_cat')}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="pivot-container" class="min-h-[200px] max-h-[60vh] overflow-y-auto border rounded"></div>
+                 `,
+                    width: '95%',
+                    showCloseButton: true,
+                    showConfirmButton: false,
+                    customClass: { popup: 'rounded-2xl' },
+                    didOpen: () => {
+                        const rowSel = document.getElementById('pivot-row-select');
+                        const colSel = document.getElementById('pivot-col-select');
+
+                        const update = () => renderPivot(rowSel.value, colSel.value);
+
+                        rowSel.addEventListener('change', update);
+                        colSel.addEventListener('change', update);
+
+                        // Initial Render
+                        update();
+                    }
+                });
+            },
+
             Maintenance: {
                 linkHistory: () => {
                     let count = 0;
@@ -2010,7 +2150,6 @@
             renderReports: () => {
                 const start = document.getElementById('rpt-start').value; const end = document.getElementById('rpt-end').value; const type = document.getElementById('rpt-type').value;
                 if (!start || !end) return;
-                if (!start || !end) return;
 
                 // Base Date Filter
                 let filtered = store.transactions.filter(t => t.date >= start && t.date <= end);
@@ -2029,13 +2168,41 @@
                 document.getElementById('rpt-total-sum').innerText = "$ " + sum.toLocaleString();
                 const diffTime = new Date(end) - new Date(start); const months = Math.max(diffTime / (1000 * 60 * 60 * 24 * 30), 1);
                 document.getElementById('rpt-avg').innerText = "$ " + Math.round(sum / months).toLocaleString();
-                const ctx = document.getElementById('chart-main').getContext('2d'); if (state.reportChart) state.reportChart.destroy();
-                const isTrend = (diffTime / (1000 * 60 * 60 * 24)) > 35;
-                let data = {}; let options = { responsive: true, maintainAspectRatio: false, plugins: {} };
-                const totalLabelsPlugin = { id: 'totalLabels', afterDatasetsDraw: (chart) => { if (chart.config.type !== 'bar') return; const { ctx, scales: { x, y } } = chart; ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.font = 'bold 10px "Segoe UI", sans-serif'; ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim() || '#4b5563'; const dsCount = chart.data.datasets.length; if (dsCount === 0) return; const dataLen = chart.data.datasets[0].data.length; for (let i = 0; i < dataLen; i++) { let s = 0; let highestY = y.getPixelForValue(0); for (let d = 0; d < dsCount; d++) { const v = chart.data.datasets[d].data[i]; s += v; const meta = chart.getDatasetMeta(d); if (!meta.hidden && meta.data[i] && meta.data[i].y < highestY) highestY = meta.data[i].y; } if (s > 0) { const xPos = x.getPixelForValue(chart.data.labels[i]); ctx.fillText("$ " + Math.round(s).toLocaleString(), xPos, highestY - 5); } } ctx.restore(); } };
-                if (type === 'doughnut' || (!isTrend && type === 'bar')) {
+
+                const ctx = document.getElementById('chart-main').getContext('2d');
+                if (state.reportChart) state.reportChart.destroy();
+
+                let data = {};
+
+                // Common Options
+                let options = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }, // Custom Legend
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function (value) {
+                                    if (Math.abs(value) >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
+                                    if (Math.abs(value) >= 1000) return '$' + (value / 1000).toFixed(0) + 'K';
+                                    return '$' + value;
+                                },
+                                font: { size: 10, weight: 'bold' }
+                            }
+                        },
+                        x: {
+                            ticks: { font: { size: 10 } }
+                        }
+                    }
+                };
+
+                // 1. Doughnut or Simple Bar (Total per Cat/Group)
+                if (type === 'doughnut' || type === 'bar') {
                     const uniqueCats = [...new Set(filtered.map(t => t.category))];
-                    const useGroups = uniqueCats.length === 1;
+                    const useGroups = uniqueCats.length === 1 || state.filterCats.size === 1;
 
                     const c = {};
                     filtered.forEach(t => {
@@ -2043,41 +2210,120 @@
                         c[k] = (c[k] || 0) + t.total
                     });
 
-                    const bgColors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280', '#ec4899', '#14b8a6', '#6366f1', '#14b8a6', '#f43f5e', '#84cc16'];
+                    // Sort descending
+                    const sortedKeys = Object.keys(c).sort((a, b) => c[b] - c[a]);
+                    const sortedValues = sortedKeys.map(k => c[k]);
+
+                    const bgColors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280', '#ec4899', '#14b8a6', '#6366f1', '#f43f5e', '#84cc16'];
                     data = {
-                        labels: Object.keys(c),
+                        labels: sortedKeys,
                         datasets: [{
-                            label: useGroups ? 'Total por Grupo' : 'Total por Categoría',
-                            data: Object.values(c),
-                            backgroundColor: bgColors.slice(0, Object.keys(c).length).map((_, i) => bgColors[i % bgColors.length])
+                            label: 'Total',
+                            data: sortedValues,
+                            backgroundColor: bgColors.slice(0, sortedKeys.length).map((_, i) => bgColors[i % bgColors.length])
                         }]
                     };
-                }
-                else {
-                    const keys = [...new Set(filtered.map(t => t.date.substring(0, 7)))].sort();
-                    if (type === 'stacked' || type === 'grouped') {
-                        const uniqueCats = [...new Set(filtered.map(t => t.category))];
-                        let dimensions = uniqueCats.sort();
-                        let field = 'category';
 
-                        if (uniqueCats.length === 1) {
-                            dimensions = [...new Set(filtered.map(t => t.group))].sort();
-                            field = 'group';
-                        }
-
-                        const datasets = dimensions.map((dim, i) => ({
-                            label: dim,
-                            data: keys.map(k => filtered.filter(t => t.date.startsWith(k) && t[field] === dim).reduce((s, t) => s + t.total, 0)),
-                            backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280', '#ec4899', '#14b8a6'][i % 8]
-                        }));
-                        data = { labels: keys, datasets: datasets };
-                        if (type === 'stacked') options.scales = { x: { stacked: true }, y: { stacked: true } };
-                    } else {
-                        const totals = keys.map(k => filtered.filter(t => t.date.startsWith(k)).reduce((s, t) => s + t.total, 0));
-                        data = { labels: keys, datasets: [{ label: 'Total', data: totals, backgroundColor: '#3b82f6', borderColor: '#2563eb', tension: 0.3, type: type === 'line' ? 'line' : 'bar', fill: type === 'line' }] };
+                    if (type === 'bar') {
+                        // Total Labels Plugin for Bar
+                        options.plugins.totalLabels = { id: 'totalLabels' }; // We'll implement inline plugin logic if needed, or rely on tooltip. 
+                        // Previous implementation had complex inline plugin. Let's keep it simple for now to save space, or restore it. 
+                        // Restoring the inline plugin for labels on top of bars:
+                        options.plugins = { ...options.plugins, legend: { display: false } }; // Re-ensure
                     }
                 }
-                state.reportChart = new Chart(ctx, { type: (type === 'stacked' || type === 'grouped') ? 'bar' : type, data: data, options: options, plugins: [totalLabelsPlugin] });
+                // 2. Time Series (Stacked, Grouped, Multiline)
+                else {
+                    const keys = [...new Set(filtered.map(t => t.date.substring(0, 7)))].sort(); // Months
+
+                    const uniqueCats = [...new Set(filtered.map(t => t.category))];
+                    // If Multiline OR (Stacked/Grouped with One Category selected), we split by Group
+                    // If Stacked/Grouped with Many Categories, we split by Category
+
+                    let dimensions = [];
+                    let field = '';
+
+                    const isSingleCat = uniqueCats.length === 1 || state.filterCats.size === 1;
+
+                    if (isSingleCat) {
+                        dimensions = [...new Set(filtered.map(t => t.group || "General"))].sort();
+                        field = 'group';
+                    } else {
+                        dimensions = uniqueCats.sort();
+                        field = 'category';
+                    }
+
+                    const datasets = dimensions.map((dim, i) => ({
+                        label: dim,
+                        data: keys.map(k => {
+                            return filtered.filter(t => t.date.startsWith(k) && (t[field] || "General") === dim).reduce((s, t) => s + t.total, 0)
+                        }),
+                        backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280', '#ec4899', '#14b8a6', '#6366f1'][i % 9],
+                        borderColor: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280', '#ec4899', '#14b8a6', '#6366f1'][i % 9],
+                        tension: 0.3,
+                        fill: type === 'stacked' // Area chart feel for stacked line? No, stacked bar is bar. Multiline is line.
+                    }));
+
+                    data = { labels: keys, datasets: datasets };
+
+                    if (type === 'stacked') { options.scales.x.stacked = true; options.scales.y.stacked = true; }
+                }
+
+                // Render Chart
+                const totalLabelsPlugin = {
+                    id: 'totalLabels',
+                    afterDatasetsDraw: (chart) => {
+                        if (chart.config.type !== 'bar' || type === 'stacked' || type === 'grouped') return; // Only simple bar
+                        const { ctx, scales: { x, y } } = chart;
+                        ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+                        ctx.font = 'bold 10px "Segoe UI", sans-serif';
+                        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim() || '#4b5563';
+                        const ds = chart.data.datasets[0];
+                        if (!ds) return;
+                        ds.data.forEach((v, i) => {
+                            if (v > 0) {
+                                let label = v >= 1000000 ? '$' + (v / 1000000).toFixed(1) + 'M' : (v >= 1000 ? '$' + (v / 1000).toFixed(0) + 'K' : '$' + v);
+                                const xPos = x.getPixelForValue(chart.data.labels[i]);
+                                const yPos = y.getPixelForValue(v);
+                                ctx.fillText(label, xPos, yPos - 5);
+                            }
+                        });
+                        ctx.restore();
+                    }
+                };
+
+                state.reportChart = new Chart(ctx, {
+                    type: (type === 'multiline') ? 'line' : (type === 'doughnut' ? 'doughnut' : 'bar'),
+                    data: data,
+                    options: options,
+                    plugins: [totalLabelsPlugin]
+                });
+
+                // Custom Legend Generation
+                const leg = document.getElementById('chart-legend');
+                leg.innerHTML = "";
+                if (data.datasets) {
+                    // For Doughnut/Bar (Simple), labels are data.labels, colors are data.datasets[0].backgroundColor
+                    if (type === 'doughnut' || type === 'bar') {
+                        data.labels.forEach((l, i) => {
+                            let color = data.datasets[0].backgroundColor[i];
+                            // Abbreviate Label: First 4 chars if > 10 chars? 
+                            // User example: "Alim (Alimentos)". 
+                            // Let's just take first 4 letters.
+                            let short = l.length > 8 ? l.substring(0, 4) + '.' : l;
+                            leg.innerHTML += `<span style="color:${color}" class="text-[10px] font-bold cursor-pointer" title="${l}">${short}</span>`;
+                        });
+                    } else {
+                        // For Time Series, labels are dataset labels, colors are dataset backgroundColor/borderColor
+                        data.datasets.forEach(ds => {
+                            let l = ds.label;
+                            let color = ds.backgroundColor || ds.borderColor;
+                            if (typeof color === 'object') color = color[0]; // safety
+                            let short = l.length > 8 ? l.substring(0, 4) + '.' : l;
+                            leg.innerHTML += `<span style="color:${color}" class="text-[10px] font-bold cursor-pointer" title="${l}">${short}</span>`;
+                        });
+                    }
+                }
             }
         };
 
