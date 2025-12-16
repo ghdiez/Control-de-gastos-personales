@@ -746,7 +746,7 @@
 
         <div class="text-center mt-10 pb-10">
             <button onclick="App.factoryReset()"
-                class="border theme-border text-red-400 hover:bg-red-50 hover:text-red-600 font-bold text-xs py-2 px-4 rounded-xl transition"
+                class="border theme-border text-red-500 hover:bg-red-50 hover:text-red-700 font-bold text-xl py-4 px-8 rounded-2xl transition"
                 data-i18n="factory_reset">Restablecer Datos de Fábrica</button>
         </div>
     </section>
@@ -1404,7 +1404,7 @@
 
                 document.getElementById('form-title').innerText = I18n.t('edit_movement');
                 document.getElementById('btn-save-tx').innerText = I18n.t('update');
-                document.getElementById('btn-save-tx').className = "w-full bg-orange-500 text-white font-bold py-3 rounded-lg shadow-lg hover:bg-orange-600 transition";
+                document.getElementById('btn-save-tx').className = "w-full theme-bg-accent text-white font-bold py-3 rounded-lg shadow-lg hover:opacity-90 transition";
             },
 
             editIncome: (id) => {
@@ -1418,7 +1418,7 @@
                 document.getElementById('inp-amount').value = inc.total;
                 document.getElementById('form-title').innerText = "Editar Ingreso";
                 document.getElementById('btn-save-tx').innerText = I18n.t('update');
-                document.getElementById('btn-save-tx').className = "w-full bg-orange-500 text-white font-bold py-3 rounded-lg shadow-lg hover:bg-orange-600 transition";
+                document.getElementById('btn-save-tx').className = "w-full theme-bg-accent text-white font-bold py-3 rounded-lg shadow-lg hover:opacity-90 transition";
             },
 
             deleteTransaction: (id) => { Swal.fire({ title: I18n.t('delete') + '?', icon: 'warning', showCancelButton: true }).then(r => { if (r.isConfirmed) { store.transactions = store.transactions.filter(t => t.id !== id); App.save(); } }); },
@@ -1522,16 +1522,10 @@
 
                 if (isExp) {
                     tExp.className = "flex-1 py-3 text-sm font-bold rounded-lg transition-all duration-300 theme-bg-accent text-white shadow-md";
-                    tExp.innerHTML = `<i class="fas fa-arrow-down mr-2"></i> ${I18n.t('tab_expense')}`;
-
                     tInc.className = "flex-1 py-3 text-sm font-bold rounded-lg transition-all duration-300 theme-text-secondary hover:bg-gray-100";
-                    tInc.innerHTML = `<i class="fas fa-arrow-up mr-2"></i> ${I18n.t('tab_income')}`;
                 } else {
                     tExp.className = "flex-1 py-3 text-sm font-bold rounded-lg transition-all duration-300 theme-text-secondary hover:bg-gray-100";
-                    tExp.innerHTML = `<i class="fas fa-arrow-down mr-2"></i> ${I18n.t('tab_expense')}`;
-
                     tInc.className = "flex-1 py-3 text-sm font-bold rounded-lg transition-all duration-300 theme-bg-accent text-white shadow-md";
-                    tInc.innerHTML = `<i class="fas fa-arrow-up mr-2"></i> ${I18n.t('tab_income')}`;
                 }
 
                 // Visibility

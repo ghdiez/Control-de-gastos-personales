@@ -22,6 +22,7 @@ const translations = {
         detailed_mode: "Modo Detallado (Cant * Unit)",
         qty: "Cant.",
         unit_value: "Valor Unitario",
+        value: "Valor",
         total_pay: "Total a Pagar",
         save: "Guardar",
         update: "Actualizar",
@@ -188,6 +189,7 @@ const translations = {
         detailed_mode: "Detailed Mode (Qty * Unit)",
         qty: "Qty",
         unit_value: "Unit Value",
+        value: "Value",
         total_pay: "Total to Pay",
         save: "Save",
         update: "Update",
@@ -350,6 +352,7 @@ const translations = {
         detailed_mode: "Modo Detalhado (Qtd * Unit)",
         qty: "Qtd.",
         unit_value: "Valor Unitário",
+        value: "Valor",
         total_pay: "Total a Pagar",
         save: "Salvar",
         update: "Atualizar",
@@ -504,6 +507,7 @@ const I18n = {
     },
 
     t: (key, params = {}) => {
+        if (!translations[I18n.currentLang]) return key; // Safety check
         let str = translations[I18n.currentLang][key] || key;
         for (const [k, v] of Object.entries(params)) {
             str = str.replace(`{${k}}`, v);
