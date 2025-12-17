@@ -6,7 +6,12 @@
 ![Stack](https://img.shields.io/badge/Stack-Tailwind%20%2B%20JS-38bdf8?logo=tailwindcss)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-**SmartFinance** es una aplicación moderna y ligera diseñada para ayudarte a tomar el control de tus finanzas personales. Sin servidores externos, sin suscripciones, y con total privacidad: tus datos se guardan en tu dispositivo.
+**SmartFinance** es una aplicación moderna y ligera diseñada para ayudarte a tomar el control de tus finanzas personales.
+
+### 🚀 ¿Por qué SmartFinance?
+*   🔒 **Privacidad Absoluta**: No recolectamos datos. Tu información financiera vive **exclusivamente en tu dispositivo**.
+*   ✈️ **100% Offline**: Funciona perfectamente sin conexión a internet.
+*   💎 **Sin Suscripciones**: Modelo de **único pago**. Olvídate de mensualidades o costos ocultos.
 
 ## ✨ Características Principales
 
