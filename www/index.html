@@ -326,27 +326,42 @@
 
 <body>
 
-    <header class="theme-bg-header transition-colors duration-500 text-white p-4 shadow-md fixed top-0 w-full z-10">
-        <div class="flex justify-between items-center max-w-4xl mx-auto">
-            <h1 class="text-xl font-bold tracking-tight"><i class="fas fa-wallet mr-2"></i> <span
-                    data-i18n="app_title">GastosApp</span></h1>
-            <div class="flex items-center gap-6">
-                <button onclick="App.showBalanceMenu()" class="text-white hover:text-gray-200 transition">
+    <header
+        class="theme-bg-header transition-colors duration-500 text-white p-4 pb-4 shadow-md fixed top-0 w-full z-10 rounded-b-2xl">
+        <div class="flex flex-col gap-3 max-w-4xl mx-auto">
+            <!-- Row 1: Title & Icon -->
+            <div class="flex justify-center items-center">
+                <h1 class="text-3xl font-bold tracking-tight flex items-center">
+                    <i class="fas fa-wallet mr-3 text-3xl"></i>
+                    <span data-i18n="app_title">SmartFinance</span>
+                </h1>
+            </div>
+
+            <!-- Row 2: Action Buttons (Distributed Equally) -->
+            <div class="flex justify-between items-center px-6">
+                <button onclick="App.showBalanceMenu()"
+                    class="text-white hover:text-gray-200 transition transform hover:scale-110">
                     <i class="fas fa-scale-balanced text-3xl"></i>
                 </button>
-                <button onclick="I18n.toggleLanguage()" class="hover:scale-110 transition" id="btn-lang-toggle">
-                    <img src="assets/flags/co.png" class="w-8 h-6 rounded shadow-sm border border-white">
+
+                <button onclick="I18n.toggleLanguage()" class="transition transform hover:scale-110"
+                    id="btn-lang-toggle">
+                    <img src="assets/flags/co.png" class="w-10 h-7 rounded shadow-md border border-white object-cover">
                 </button>
-                <button onclick="UI.ThemeManager.toggle()" class="text-white hover:text-gray-200 transition">
+
+                <button onclick="UI.ThemeManager.toggle()"
+                    class="text-white hover:text-gray-200 transition transform hover:scale-110">
                     <i class="fas fa-palette text-3xl"></i>
                 </button>
-                <button onclick="App.showHelpMenu()" class="text-white hover:text-gray-200 transition">
+
+                <button onclick="App.showHelpMenu()"
+                    class="text-white hover:text-gray-200 transition transform hover:scale-110">
                     <i class="fas fa-circle-question text-3xl"></i>
                 </button>
             </div>
         </div>
     </header>
-    <div class="h-20"></div>
+    <div class="h-40"></div>
 
     <section id="view-dashboard" class="p-4 fade-in">
         <!-- Balance Card -->

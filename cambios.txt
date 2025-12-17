@@ -224,8 +224,6 @@ Reportes inteligentes
 existen los botones "Este mes", "3 meses" y "Este año".
 El que debe aparecer resaltado debe ser el seleccionado por el usuariom, sin embargo, "este mes" tiene un tono algo más oscuro que los otros 2 y la fuente de un color diferente. Estandariza los 3 para que se vean iguales en tono y fuente. El seleccionado se debe resaltar, para que el usuario pueda identificar visualmente el período graficado.
 ==========================
-saldo: $1.937.643
-gasto ingresado: 3764300. 
-La app lo tranforma en: 37.643,00
-nuevo saldo: $1.937.605,36
-eso significa que la app transforma el valor 37643 en 37.643 (37 unidades)
+vamos a hacer un cambio mínimo. El ícono de la bandera es excesivamente pequeño. Aumenta su tamaño para que sea similar a los íconos en la barra superior. Esto requiere una redistribución de la barra.
+En la primera fila va el ícono de una billetera (eso creo) y SmartFinance. Aumenta un poco el tamaño de la fuente y la billetera.
+Los íconos Balanza, Bandera, Paleta y ? se distribuyen equitativamente en la segunda fila.
