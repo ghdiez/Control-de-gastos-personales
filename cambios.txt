@@ -138,3 +138,94 @@ utiliza un procedimiento más robusto que fuerce la actualización o cambio del 
 el ícono ahora es el default de Capacitor.
 Android continúa diciendo que Actualice la app existente.
 Revisa cuidadosamente y resuelve de manera definitva.
+==========================
+Encontré un error grave:
+Al seleccionar una categoría no se carga el listbox de grupos respectivo. Por ejemplo, si selecciono alimentos, grupos debería contener: Preparado, No preparado, Chucherías y otro, pero está vacío. Pasa lo mismo con cualquier categoría.
+==========================
+Correcciones necesarias:
+1. Etiquetas de botones u otros objetos quemados en ingles:
+Inicio - month_total: month_tx, recent_activity, view_all, reports.  -> ok
+
+Etiquetas de botones u otros objetos quemados en español: 
+Config thresholds: Mínimo (rojo) y Meta (verde). -> ok
+Balance options - adjust balance:
+Saldo sistema xx ingresa tu saldo real. -> ok
+
+Otros cambios:
+-Ayuda - botón "ayuda/guia" no se aplica el tema seleccionado. -> ok
+
+Tengo una inquietud muy importante.
+La app permite crear/modificar Categorías y grupos. Sin embargo, creo que la importación y exportación acpetan estructuras de datos fijas. Analiza la situación y propón una solución.
+
+No olvides el protocolo de trabajo.
+Espera siempre la instrucción PROCEDE antes de generar código.
+==========================
+1. Ayuda - modal menu - botón "Cancel" etiqueta quemada en inglés.
+2. Modal opciones de saldo - Botón "Cancelar" agrandar HORIZONTALMENTE 40% del tamaño actual, la altura debe ser la misma de los demás botones del modal.
+3. Restablecer datos de fábrica. 
+3.1 El modal no tiene bordes redondeados. Verificar TODA la app y asegurarse de que todos los modales tengan bordes redondeados.
+3.2 Etiqueta del botón "Cancel" quemada en código (en inglés). El botón no respeta el tema.
+=========================
+apliqué factory reset para eliminar todos registros y empezar con la app "limpia". 
+1. Como puedes ver en la imagen, el idioma seleccionado es inglés. Las categorías y grupos sugeridos deberían estar en el idioma correspondiente.
+2. El botón "Nuevo servicio" despliega el modal "Nuevo" en el cual el botón "Cancel" tiene la etiqueta quemada en inglés. Revisa TODOS los botones Cancel de la app, para estar seguros de que la etiqueta se traduce al idioma seleccionado.
+========================
+no se aplicaron los cambios.
+1. Si se aplica Factory reset, al desplegar las categorías predefinidas en la app, con inglés como idioma seleccionado, estas deberían ser Foods (no Alimentos), Transport (no Transporte) y así sucesivamente.
+2. El botón Cancel sigue teniendo la etiqueta Cancel, sin importar el idioma seleccionado.
+=======================
+después del factory reset, las categorías y grupos predefinidos deben cambiar cada vez que se cambie el idioma seleccionado. Ajusta eso.
+=======================
+Error después de Factory Reset, al hacer clic en el botón Configurar:
+(index):1581 Uncaught SyntaxError: Unexpected token '.' (at (index):1581:25)
+2(index):411 Uncaught ReferenceError: App is not defined
+    at HTMLDivElement.onclick ((index):411:177)
+=======================
+Las categorías/grupos se establecen de acuerdo con el idioma detectado, pero no cambian con la selección del usuario.
+=======================
+al parecer, el idioma de las categorías/grupos predefinidos se establece según el idioma seleccionado en el momento del reset, pero no cambian al seleccionar otro idioma.
+
+Antes de que hagas algo, dime si la implementación de eso es compleja.
+=======================
+Vamos a abordar otras mejoras.
+Gráficas:
+1. Debido a que el espacio de visualización es escaso, se hace necesario optimizarlo. 
+Las eriquetas de las series consumen mucho espacio. Me parece que una estrategia que puede funcionar, si es posible implementar, es eliminar las líneas de convenciones (colores) que representan cada serie y dejar sólo el nombre de la categoría, resumido cuando sea muy largo, por ejemplo: Alim (alimentos) y este texto lleva el color de la serie. Esto se aplicaría a todos los tipos de gráfica.
+dime si eso es posible.
+2. Agrega un tipo de gráfica que sea líneas. Cada serie o grupo se dibuja con su propia línea de un color particular. Tener la posibilidad de comparar los grupos de una categoría puede ser de gran utilidad.
+3. Elimina la gráfica "Línea de tendencia"
+4. Es posible implementar alguna funcionalidad de Tablas dinámicas?
+Te recuerdo apegarte al protocolo
+=========================
+me gusta el plan. Agrega esto: Los rótulos del eje y vamos a abreviarlos. Utilicemos prefijos griegos (la inicial), K para 1000, M para millón. Esto nos ayuda mucho.
+=========================
+me gusta el resultado. Sólo quedé inconforme con la tabla dinámica. Es posible darle mayor control al usuario? Algo así como pemitirle hacer drag-and-drop como en Excel. También seleccionar los campos de las diferentes secciones de la tabla dinámica.
+Dime si esto es posible o estoy pidiendo demasiado.
+==========================
+Nuevos cambios:
+1. Nuevo movimiento: "link service" está quemado en inglés.
+2. En nuevo movimiento, aplicar formato (separador de miles con 1 decimal) a valores ingresados a medida que se ingresan (campo valor unitario), para reducir la probabilidad de error.
+3. En histórico cargar 50 nuevos registros cada vez que el usuario trata de deslizar al final de la pantalla.
+4. Nombres de los archivos para exportar:
+4.1 bk-SmartFinance-{yymmdd}-{hhmm}.json
+4.2 bk-SmartFinance-{yymmdd}-{hhmm}.csv
+5. El botón exportar CSV debe exportar todos los registros de la BD
+==========================
+-tengo un saldo de -168923464.
+-voy a ajustar saldo.
+-ingreso 500000
+-el nuevo saldo disponible es 500000 (en color rojo, pero sin signo -)
+-es problema del color o el saldo es negativo?
+==========================
+	opciones de saldo
+	-botón Cancelar, aumenta el ancho al 50% del contenedor
+==========================
+Reportes inteligentes
+existen los botones "Este mes", "3 meses" y "Este año".
+El que debe aparecer resaltado debe ser el seleccionado por el usuariom, sin embargo, "este mes" tiene un tono algo más oscuro que los otros 2 y la fuente de un color diferente. Estandariza los 3 para que se vean iguales en tono y fuente. El seleccionado se debe resaltar, para que el usuario pueda identificar visualmente el período graficado.
+==========================
+saldo: $1.937.643
+gasto ingresado: 3764300. 
+La app lo tranforma en: 37.643,00
+nuevo saldo: $1.937.605,36
+eso significa que la app transforma el valor 37643 en 37.643 (37 unidades)

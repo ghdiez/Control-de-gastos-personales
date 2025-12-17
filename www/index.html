@@ -440,7 +440,7 @@
         </div>
 
         <div class="theme-bg-card p-6 rounded-2xl shadow-lg border theme-border">
-            <form id="form-add" onsubmit="event.preventDefault(); App.saveTx();">
+            <form id="form-add">
                 <input type="hidden" id="inp-edit-id">
                 <input type="hidden" id="inp-type" value="expense">
 
@@ -478,7 +478,7 @@
                     <div id="box-recurring-select"
                         class="mb-5 hidden-section theme-bg-accent-light p-3 rounded-lg border theme-border">
                         <label class="block text-xs font-bold theme-text-primary uppercase tracking-wider mb-2"
-                            data-i18n="link_service">Vincular a Servicio (Opcional)</label>
+                            data-i18n="link_service_optional">Vincular a Servicio (Opcional)</label>
                         <select id="inp-service-link"
                             class="w-full theme-bg-card border theme-border rounded-xl p-2 theme-text-primary font-bold outline-none text-sm"></select>
                     </div>
@@ -523,9 +523,10 @@
                     <div>
                         <label class="block text-xs font-bold theme-text-muted uppercase tracking-wider mb-2"
                             data-i18n="unit_value">Valor Unit.</label>
-                        <input type="number" id="inp-unit" oninput="UI.calcTotal()"
+                        <input type="text" id="inp-unit" inputmode="numeric"
+                            oninput="UI.formatCurrencyInput(this); UI.calcTotal()"
                             class="w-full theme-bg-accent-light border theme-border rounded-xl p-3 theme-text-primary font-bold outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-400 transition"
-                            placeholder="0">
+                            placeholder="0,00">
                     </div>
                     <div
                         class="col-span-2 text-right text-sm theme-text-secondary font-bold pt-2 border-t theme-border mt-2">
@@ -538,7 +539,7 @@
                     <button type="button" onclick="UI.discardForm()"
                         class="w-full py-4 rounded-xl font-bold theme-text-secondary border theme-border hover:bg-gray-100 transition"
                         data-i18n="discard_back">Descartar / Volver</button>
-                    <button type="submit" id="btn-save-tx"
+                    <button type="button" id="btn-save-tx" onclick="App.saveTx()"
                         class="w-full py-4 rounded-xl font-bold text-white theme-bg-accent shadow-lg transform active:scale-95 transition"
                         data-i18n="save">Guardar</button>
                 </div>
@@ -607,13 +608,13 @@
                 </div>
             </div>
             <div class="flex justify-between gap-2 mb-4">
-                <button onclick="App.setReportRange(1)"
-                    class="flex-1 theme-bg-accent-light theme-text-accent-dark text-[10px] font-bold py-2 rounded-lg border theme-border hover:opacity-80 transition"
+                <button id="btn-range-1" onclick="App.setReportRange(1)"
+                    class="flex-1 theme-bg-card theme-text-secondary text-[10px] font-bold py-2 rounded-lg border theme-border hover:bg-gray-100 transition"
                     data-i18n="this_month">Este Mes</button>
-                <button onclick="App.setReportRange(3)"
+                <button id="btn-range-3" onclick="App.setReportRange(3)"
                     class="flex-1 theme-bg-card theme-text-secondary text-[10px] font-bold py-2 rounded-lg border theme-border hover:bg-gray-100 transition"
                     data-i18n="three_months">3 Meses</button>
-                <button onclick="App.setReportRange(12)"
+                <button id="btn-range-12" onclick="App.setReportRange(12)"
                     class="flex-1 theme-bg-card theme-text-secondary text-[10px] font-bold py-2 rounded-lg border theme-border hover:bg-gray-100 transition"
                     data-i18n="this_year">Este Año</button>
             </div>
@@ -915,7 +916,7 @@
             transactions: [],
             incomes: [],
             settings: {
-                balanceThresholds: { min: 500000, mid: 1000000 }
+                balanceThresholds: { min: 0, mid: 0 }
             },
             categories: [], // Populated dynamically
             recurringServices: []
@@ -958,7 +959,7 @@
         };
 
         let store = { ...DEFAULT_DATA };
-        let state = { editTxId: null, editIncId: null, historySort: { key: 'date', dir: 'desc' }, selectedTx: new Set(), reportChart: null, filteredCount: 0, filterCats: new Set(), filterGroups: new Set(), historyType: 'expense' };
+        let state = { editTxId: null, editIncId: null, historySort: { key: 'date', dir: 'desc' }, selectedTx: new Set(), reportChart: null, filteredCount: 0, filterCats: new Set(), filterGroups: new Set(), historyType: 'expense', historyLimit: 50 };
 
         const App = {
             init: async () => {
@@ -1013,14 +1014,9 @@
             showBalanceMenu: async () => {
                 const { value: result } = await Swal.fire({
                     title: I18n.t('balance_options'),
-                    showCancelButton: true,
+                    showCancelButton: false,
                     showConfirmButton: false,
-                    cancelButtonText: I18n.t('cancel'),
-                    buttonsStyling: false,
-                    customClass: {
-                        popup: 'rounded-2xl',
-                        cancelButton: 'w-full mt-4 theme-text-secondary font-bold py-3 rounded-xl border theme-border hover:bg-gray-100 transition shadow-sm'
-                    },
+                    customClass: { popup: 'rounded-2xl' },
                     html: `
                         <button onclick="swal.clickConfirm(); setTimeout(() => App.adjustBalancePrompt(), 200)" class="w-full theme-bg-accent-light theme-text-primary font-bold py-3 rounded-xl mb-2 border theme-border hover:opacity-80">
                             <i class="fas fa-scale-balanced mr-2"></i> ${I18n.t('adjust_balance')}
@@ -1028,6 +1024,9 @@
                         <button onclick="swal.clickConfirm(); setTimeout(() => App.balanceSettingsPrompt(), 200)" class="w-full theme-bg-accent-light theme-text-primary font-bold py-3 rounded-xl border theme-border hover:opacity-80">
                             <i class="fas fa-sliders-h mr-2"></i> ${I18n.t('config_thresholds')}
                         </button>
+                        <div class="mt-4 text-center">
+                            <button onclick="swal.close()" class="w-1/2 font-bold py-3 rounded-xl border theme-border theme-text-accent hover:bg-gray-100 transition shadow-sm">${I18n.t('cancel')}</button>
+                        </div>
                     `
                 });
             },
@@ -1035,10 +1034,9 @@
             showHelpMenu: async () => {
                 const { value: result } = await Swal.fire({
                     title: "Menu",
-                    showCancelButton: true,
+                    showCancelButton: false,
                     showConfirmButton: false,
-                    cancelButtonText: I18n.t('cancel'),
-                    customClass: { popup: 'rounded-2xl', cancelButton: 'w-full mt-2 theme-text-secondary font-bold py-3 rounded-xl border theme-border hover:bg-gray-100 transition' },
+                    customClass: { popup: 'rounded-2xl' },
                     html: `
                         <button onclick="swal.clickConfirm(); setTimeout(() => App.showAbout(), 200)" class="w-full theme-bg-accent-light theme-text-primary font-bold py-3 rounded-xl mb-2 border theme-border hover:opacity-80">
                             <i class="fas fa-info-circle mr-2"></i> ${I18n.t('menu_about')}
@@ -1046,6 +1044,9 @@
                         <button onclick="swal.clickConfirm(); setTimeout(() => App.showGuide(), 200)" class="w-full theme-bg-accent-light theme-text-secondary font-bold py-3 rounded-xl border theme-border hover:opacity-80">
                             <i class="fas fa-book mr-2"></i> ${I18n.t('menu_help')}
                         </button>
+                         <div class="mt-4 text-center">
+                            <button onclick="swal.close()" class="w-1/2 font-bold py-3 rounded-xl border theme-border theme-text-accent hover:bg-gray-100 transition shadow-sm">${I18n.t('cancel')}</button>
+                        </div>
                     `
                 });
             },
@@ -1130,7 +1131,8 @@
                     inputPlaceholder: "Ej: 500000",
                     showCancelButton: true,
                     cancelButtonText: I18n.t('cancel'),
-                    customClass: { popup: 'rounded-2xl' }
+                    buttonsStyling: false,
+                    customClass: { popup: 'rounded-2xl', confirmButton: 'w-[48%] rounded-xl mr-1 theme-bg-accent text-white font-bold py-3 shadow-lg', cancelButton: 'w-[48%] rounded-xl theme-text-secondary font-bold py-3 border theme-border hover:bg-gray-100' }
                 });
 
                 if (!realBalStr) return;
@@ -1149,7 +1151,7 @@
                 if (diff > 0) {
                     // Need to add Income
                     store.incomes.push({
-                        id: crypto.randomUUID(),
+                        id: App.uuid(),
                         date: date,
                         description: "Ajuste Saldo Inicial",
                         total: diff
@@ -1159,7 +1161,7 @@
                     // We'll add it as a "Varios" expense or similar
                     const cat = store.categories.find(c => c.name === 'Varios' || c.name === 'Otros') || store.categories[0];
                     store.transactions.push({
-                        id: crypto.randomUUID(),
+                        id: App.uuid(),
                         date: date,
                         categoryId: cat.id,
                         category: cat.name,
@@ -1202,6 +1204,29 @@
                 if (!document.getElementById('view-reportes').classList.contains('hidden-section')) UI.renderReports();
             },
 
+            getIcon: (catName) => {
+                const map = {
+                    'Vivienda': 'fa-home', 'Housing': 'fa-home', 'Moradia': 'fa-home',
+                    'Alimentación': 'fa-utensils', 'Food': 'fa-utensils', 'Alimentação': 'fa-utensils',
+                    'Transporte': 'fa-bus', 'Transport': 'fa-bus',
+                    'Salud': 'fa-medkit', 'Health': 'fa-medkit', 'Saúde': 'fa-medkit',
+                    'Ocio': 'fa-gamepad', 'Leisure': 'fa-gamepad', 'Lazer': 'fa-gamepad',
+                    'Educación': 'fa-graduation-cap', 'Education': 'fa-graduation-cap', 'Educação': 'fa-graduation-cap',
+                    'Compras': 'fa-shopping-bag', 'Shopping': 'fa-shopping-bag',
+                    'Financiero': 'fa-chart-line', 'Financial': 'fa-chart-line', 'Financeiro': 'fa-chart-line',
+                    'Varios': 'fa-box', 'Others': 'fa-box', 'Outros': 'fa-box'
+                };
+                return map[catName] || 'fa-tag';
+            },
+
+            uuid: () => {
+                if (window.isSecureContext && crypto.randomUUID) return crypto.randomUUID();
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            },
+
             factoryReset: () => {
                 Swal.fire({
                     title: I18n.t('confirm_reset'),
@@ -1209,12 +1234,12 @@
                     icon: 'warning',
                     showCancelButton: true,
                     cancelButtonText: I18n.t('cancel'),
-                    confirmButtonColor: '#d33',
                     confirmButtonText: I18n.t('btn_reset'),
+                    buttonsStyling: false,
                     customClass: {
                         popup: 'rounded-2xl',
-                        confirmButton: 'rounded-xl shadow-lg',
-                        cancelButton: 'rounded-xl border theme-border theme-text-secondary font-bold'
+                        confirmButton: 'w-[48%] rounded-xl shadow-lg bg-red-600 text-white font-bold py-3 mr-1',
+                        cancelButton: 'w-[48%] rounded-xl border theme-border theme-text-accent font-bold py-3 hover:bg-gray-100'
                     }
                 }).then(async (r) => {
                     if (r.isConfirmed) {
@@ -1289,7 +1314,8 @@
             },
 
             saveTransaction: () => {
-                const isExp = document.getElementById('inp-type').value === 'expense';
+                // Determine type based on Active Tab Class to be 100% sure
+                const isExp = document.getElementById('tab-add-expense').classList.contains('theme-bg-accent');
                 if (isExp) App.saveTransactionLogic(); else App.saveIncome();
             },
 
@@ -1300,6 +1326,10 @@
 
                 const date = document.getElementById('inp-date').value;
                 const catId = document.getElementById('inp-cat').value;
+
+                // CRITICAL VALIDATION: Expenses MUST have a category
+                if (!catId) return Swal.fire(I18n.t('error'), I18n.t('err_cat_req') || "Categoría requerida", 'error');
+
                 const group = document.getElementById('inp-group').value;
                 const serviceLink = document.getElementById('inp-service-link').value;
 
@@ -1308,8 +1338,7 @@
                 // Check detailed mode
                 if (!document.getElementById('detailed-input').classList.contains('hidden-section')) {
                     quantity = parseFloat(document.getElementById('inp-qty').value) || 0;
-                    unitValue = parseFloat(document.getElementById('inp-unit').value) || 0;
-                    total = quantity * unitValue;
+                    unitValue = UI.parseCurrency(document.getElementById('inp-unit').value) || 0;
                 } else {
                     total = parseFloat(document.getElementById('inp-amount').value) || 0;
                     unitValue = total;
@@ -1329,7 +1358,7 @@
                     }
                 } else {
                     store.transactions.push({
-                        id: crypto.randomUUID(),
+                        id: App.uuid(),
                         date, description: desc, total, quantity, unitValue,
                         categoryId: catId, category: store.categories.find(c => c.id === catId).name,
                         group, serviceId: serviceLink || null
@@ -1342,7 +1371,11 @@
 
             saveIncome: () => {
                 const desc = document.getElementById('inp-desc').value;
-                const total = parseFloat(document.getElementById('inp-amount').value) || 0;
+                const rawVal = document.getElementById('inp-amount').dataset.realValue;
+                let total = 0;
+                if (rawVal !== undefined && rawVal !== "") total = parseFloat(rawVal);
+                else total = UI.parseCurrency(document.getElementById('inp-amount').value) || 0;
+
                 const date = document.getElementById('inp-date').value;
 
                 if (!desc || total <= 0) return Swal.fire('Error', 'Descripción y valor requeridos', 'error');
@@ -1356,7 +1389,7 @@
                         App.resetForm(); App.nav('history');
                     }
                 } else {
-                    store.incomes.push({ id: crypto.randomUUID(), date, description: desc, total });
+                    store.incomes.push({ id: App.uuid(), date, description: desc, total });
                     App.save();
                     Swal.fire(I18n.t('saved'), 'Ingreso guardado', 'success');
                     App.resetForm();
@@ -1382,72 +1415,7 @@
                 if (srv.type === 'VARIABLE') document.getElementById('inp-total').focus();
             },
 
-            saveTransaction: () => {
-                const type = document.getElementById('inp-type').value;
-                if (type === 'income') return App.saveIncome();
 
-                const id = state.editTxId;
-                const date = document.getElementById('inp-date').value;
-                const catId = document.getElementById('inp-cat').value;
-                const catName = catId ? document.getElementById('inp-cat').options[document.getElementById('inp-cat').selectedIndex].text : '';
-
-                // Determine mode by checking visibility of detailed-input
-                const isDetailed = !document.getElementById('detailed-input').classList.contains('hidden-section');
-
-                let total = 0;
-                let qty = 1;
-                let unit = 0;
-
-                if (isDetailed) {
-                    qty = parseFloat(document.getElementById('inp-qty').value) || 0;
-                    unit = parseFloat(document.getElementById('inp-unit').value) || 0;
-                    total = qty * unit;
-                } else {
-                    total = parseFloat(document.getElementById('inp-amount').value) || 0;
-                    unit = total;
-                }
-
-                if (!date || total <= 0 || !catId) return Swal.fire('Error', I18n.t('error_missing_data'), 'error');
-
-                const txObj = {
-                    id: id || crypto.randomUUID(),
-                    date, categoryId: catId, category: catName,
-                    group: document.getElementById('inp-group').value,
-                    description: document.getElementById('inp-desc').value || I18n.t('no_desc'),
-                    quantity: qty, unitValue: unit, total,
-                    serviceId: document.getElementById('inp-service-link').value || null
-                };
-
-                if (id) { const idx = store.transactions.findIndex(t => t.id === id); if (idx !== -1) store.transactions[idx] = txObj; }
-                else { store.transactions.unshift(txObj); }
-                App.save(true);
-                App.discardForm();
-                UI.updateDashboard();
-                Swal.fire({ title: I18n.t('saved'), icon: 'success', timer: 1000, showConfirmButton: false });
-            },
-
-            saveIncome: () => {
-                const id = state.editIncId;
-                const date = document.getElementById('inp-date').value;
-                const total = parseFloat(document.getElementById('inp-total').value);
-                const desc = document.getElementById('inp-desc').value;
-
-                if (!date || isNaN(total)) return Swal.fire('Error', I18n.t('error_missing_data'), 'error');
-
-                const incObj = {
-                    id: id || crypto.randomUUID(),
-                    date,
-                    description: desc || "Ingreso",
-                    total
-                };
-
-                if (id) { const idx = store.incomes.findIndex(i => i.id === id); if (idx !== -1) store.incomes[idx] = incObj; }
-                else { store.incomes.unshift(incObj); }
-                App.save(true); // Save but skip full refresh
-                App.discardForm();
-                UI.updateDashboard();
-                Swal.fire({ title: I18n.t('saved'), icon: 'success', timer: 1000, showConfirmButton: false });
-            },
 
             editTransaction: (id) => {
                 const tx = store.transactions.find(t => t.id === id); if (!tx) return;
@@ -1479,7 +1447,6 @@
 
                 document.getElementById('inp-qty').value = tx.quantity;
                 document.getElementById('inp-unit').value = tx.unitValue;
-                // inp-total is not an input, use inp-amount for simple value
                 document.getElementById('inp-amount').value = tx.total;
 
                 document.getElementById('form-title').innerText = I18n.t('edit_movement');
@@ -1501,7 +1468,21 @@
                 document.getElementById('btn-save-tx').className = "w-full theme-bg-accent text-white font-bold py-3 rounded-lg shadow-lg hover:opacity-90 transition";
             },
 
-            deleteTransaction: (id) => { Swal.fire({ title: I18n.t('delete') + '?', icon: 'warning', showCancelButton: true, cancelButtonText: I18n.t('cancel') }).then(r => { if (r.isConfirmed) { store.transactions = store.transactions.filter(t => t.id !== id); App.save(); } }); },
+            deleteTransaction: (id) => {
+                Swal.fire({
+                    title: I18n.t('delete') + '?',
+                    icon: 'warning',
+                    showCancelButton: false,
+                    showConfirmButton: false,
+                    customClass: { popup: 'rounded-2xl' },
+                    html: `
+                        <div class="flex justify-between gap-2 mt-4">
+                             <button onclick="swal.clickConfirm()" class="w-[48%] bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg hover:opacity-90 transition">${I18n.t('delete')}</button>
+                             <button onclick="swal.close()" class="w-[48%] theme-text-accent font-bold py-3 rounded-xl border theme-border hover:bg-gray-100 transition shadow-sm mx-auto block">${I18n.t('cancel')}</button>
+                        </div>
+                    `
+                }).then(r => { if (r.isConfirmed) { store.transactions = store.transactions.filter(t => t.id !== id); App.save(); } });
+            },
             setSort: (k) => { state.historySort.dir = (state.historySort.key === k && state.historySort.dir === 'asc') ? 'desc' : 'asc'; state.historySort.key = k; UI.renderHistory(); },
             editMovement: (id) => {
                 if (state.historyType === 'expense') App.editTransaction(id);
@@ -1526,10 +1507,15 @@
                     title: I18n.t('confirm_delete_many', { n: state.selectedTx.size }),
                     text: I18n.t('irreversible'),
                     icon: 'warning',
-                    showCancelButton: true,
-                    cancelButtonText: I18n.t('cancel'),
-                    confirmButtonColor: '#d33',
-                    confirmButtonText: I18n.t('delete')
+                    showCancelButton: false,
+                    showConfirmButton: false,
+                    customClass: { popup: 'rounded-2xl' },
+                    html: `
+                        <div class="flex justify-between gap-2 mt-4">
+                             <button onclick="swal.clickConfirm()" class="w-[48%] bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg hover:opacity-90 transition">${I18n.t('delete')}</button>
+                             <button onclick="swal.close()" class="w-[48%] theme-text-accent font-bold py-3 rounded-xl border theme-border hover:bg-gray-100 transition shadow-sm mx-auto block">${I18n.t('cancel')}</button>
+                        </div>
+                    `
                 }).then((r) => {
                     if (r.isConfirmed) {
                         if (state.historyType === 'expense') {
@@ -1542,7 +1528,18 @@
                     }
                 });
             },
-            setReportRange: (m) => { const e = new Date(); const s = new Date(); if (m === 12) { s.setMonth(0); s.setDate(1); } else if (m === 1) s.setDate(1); else s.setMonth(s.getMonth() - m); document.getElementById('rpt-end').value = e.toLocaleDateString('en-CA'); document.getElementById('rpt-start').value = s.toLocaleDateString('en-CA'); UI.renderReports(); },
+            setReportRange: (m) => {
+                [1, 3, 12].forEach(id => {
+                    const btn = document.getElementById(`btn-range-${id}`);
+                    if (!btn) return;
+                    if (id === m) {
+                        btn.className = "flex-1 theme-bg-accent text-white text-[10px] font-bold py-2 rounded-lg shadow-md transition transform scale-105";
+                    } else {
+                        btn.className = "flex-1 theme-bg-card theme-text-secondary text-[10px] font-bold py-2 rounded-lg border theme-border hover:bg-gray-100 transition";
+                    }
+                });
+                const e = new Date(); const s = new Date(); if (m === 12) { s.setMonth(0); s.setDate(1); } else if (m === 1) s.setDate(1); else s.setMonth(s.getMonth() - m); document.getElementById('rpt-end').value = e.toLocaleDateString('en-CA'); document.getElementById('rpt-start').value = s.toLocaleDateString('en-CA'); UI.renderReports();
+            },
 
             addServicePrompt: async (eid = null) => {
                 let curr = {}; if (eid) curr = store.recurringServices.find(s => s.id === eid) || {};
@@ -1567,7 +1564,9 @@
                     `,
                     focusConfirm: false, showCancelButton: true,
                     cancelButtonText: I18n.t('cancel'),
-                    customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl shadow-lg', cancelButton: 'rounded-xl border theme-border theme-text-secondary font-bold' },
+                    buttonsStyling: false,
+                    customClass: { popup: 'rounded-2xl', confirmButton: 'w-[48%] theme-bg-accent text-white font-bold py-3 rounded-xl shadow-lg mr-1', cancelButton: 'w-[48%] theme-text-accent font-bold py-3 rounded-xl border theme-border hover:bg-gray-100' },
+
                     preConfirm: () => [document.getElementById('sn').value, document.getElementById('st').value, document.getElementById('sc').value, document.getElementById('sd').value, document.getElementById('sf').value, document.getElementById('srv-grp').value]
                 });
 
@@ -1983,7 +1982,13 @@
                 const balance = totalInc - totalExp;
 
                 const balEl = document.getElementById('dash-balance');
-                balEl.innerText = "$ " + balance.toLocaleString();
+
+                // Determine Locale
+                let locale = 'en-US';
+                if (I18n.currentLang === 'es') locale = 'es-CO';
+                if (I18n.currentLang === 'pt') locale = 'pt-BR';
+
+                balEl.innerText = "$ " + balance.toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
                 const th = store.settings.balanceThresholds || { min: 0, mid: 0 };
                 balEl.className = "text-4xl font-bold mt-2 transition-colors duration-500";
@@ -1991,14 +1996,14 @@
                 else if (balance < th.mid) balEl.classList.add('text-orange-500');
                 else balEl.classList.add('text-green-500');
 
-                document.getElementById('dash-total-inc').innerText = "$ " + totalInc.toLocaleString();
-                document.getElementById('dash-total-exp').innerText = "$ " + totalExp.toLocaleString();
+                document.getElementById('dash-total-inc').innerText = "$ " + totalInc.toLocaleString(locale);
+                document.getElementById('dash-total-exp').innerText = "$ " + totalExp.toLocaleString(locale);
 
                 // Current Month Logic
                 const now = new Date();
                 const prefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
                 const mTx = store.transactions.filter(t => t.date.startsWith(prefix));
-                document.getElementById('dash-total').innerText = "$ " + mTx.reduce((s, t) => s + t.total, 0).toLocaleString();
+                document.getElementById('dash-total').innerText = "$ " + mTx.reduce((s, t) => s + t.total, 0).toLocaleString(locale);
                 document.getElementById('dash-count').innerText = `${mTx.length}`;
 
                 // Alerts Logic
@@ -2096,39 +2101,62 @@
                 document.getElementById('history-counter').innerText = `(${data.length})`;
                 document.getElementById('actions-history').classList.toggle('hidden-section', state.selectedTx.size === 0);
 
-                const limit = 50;
+                // Infinite Scroll Pagination
+                const limit = state.historyLimit || 50;
                 const visibleData = data.slice(0, limit);
 
                 visibleData.forEach(t => {
+                    // Normalize View logic
+                    const isInc = !t.categoryId;
+                    const sign = isInc ? '+' : '-';
+                    const colorClass = isInc ? 'text-green-600' : 'theme-text-primary';
+                    const amountStr = t.total.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+                    const icon = isInc ? 'fas fa-arrow-up' : App.getIcon(t.category);
+                    const bg = isInc ? 'bg-green-100 text-green-600' : 'theme-bg-accent-light theme-text-accent';
+
                     const row = document.createElement('div');
                     row.id = `row-${t.id}`;
-                    // Theme aware row
-                    row.className = `theme-bg-card p-3 rounded-xl shadow-sm border-l-4 ${isExp ? 'border-red-400' : 'border-green-400'} flex items-center justify-between mb-2 theme-border animate-fade transition-colors duration-500`;
+                    row.className = 'theme-bg-card p-4 rounded-xl shadow-sm border theme-border flex justify-between items-center transform transition duration-300 hover:scale-[1.01]';
+                    row.onclick = () => App.editTransaction(t.id, isInc);
 
-                    if (state.selectedTx.has(t.id)) row.classList.add('bg-yellow-50', 'ring-2', 'ring-yellow-400');
-
-                    const isSel = state.selectedTx.has(t.id);
-
-                    let html = `
-                    <div class="flex items-center gap-3 w-full">
-                        <input type="checkbox" onchange="App.toggleSelect('${t.id}')" class="checkbox-std w-5 h-5 accent-green-600" ${isSel ? 'checked' : ''}>
-                        <div class="flex-1 cursor-pointer" onclick="App.editMovement('${t.id}')">
-                            <div class="flex justify-between items-center">
-                                <span class="font-bold theme-text-primary text-sm">${t.description || I18n.t('no_desc')}</span>
-                                <span class="font-bold ${isExp ? 'text-red-500' : 'text-green-500'}">$ ${t.total.toLocaleString()}</span>
+                    row.innerHTML = `
+                         <div class="flex items-center gap-3 flex-1 overflow-hidden">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${bg} font-bold text-lg">
+                                <i class="${icon}"></i>
                             </div>
-                            <div class="flex justify-between text-xs theme-text-secondary opacity-75 mt-1">
-                                <span>${t.date}</span>
-                                <span>${isExp ? (t.category + (t.group ? ' > ' + t.group : '')) : I18n.t('lbl_h_incomes')}</span>
+                            <div class="min-w-0">
+                                <p class="font-bold text-sm truncate theme-text-primary">${t.description || I18n.t('no_desc')}</p>
+                                <p class="text-xs theme-text-secondary truncate">${isInc ? I18n.t('tab_income') : `${t.category} • ${t.group}`}</p>
+                                <p class="text-[10px] theme-text-muted mt-1 w-full flex justify-between">
+                                    <span>${t.date}</span>
+                                    ${t.serviceId ? `<i class="fas fa-link ml-2 theme-text-accent" title="${I18n.t('linked_service')}"></i>` : ''}
+                                </p>
                             </div>
                         </div>
-                    </div>`;
-                    row.innerHTML = html;
+                        <div class="text-right ml-2 shrink-0">
+                            <p class="font-bold text-sm ${colorClass}">${sign} ${amountStr}</p>
+                             <div class="mt-2 flex justify-end items-center gap-2" onclick="event.stopPropagation()">
+                                <input type="checkbox" class="checkbox-std accent-green-600" ${state.selectedTx.has(t.id) ? 'checked' : ''} onchange="App.toggleSelect('${t.id}')">
+                            </div>
+                        </div>
+                    `;
                     l.appendChild(row);
                 });
 
                 if (data.length > limit) {
-                    l.innerHTML += `<div class="text-center text-xs theme-text-muted mt-4 italic">Mostrando últimos ${limit} de ${data.length}</div>`;
+                    const moreDiv = document.createElement('div');
+                    moreDiv.className = 'py-4 text-center text-xs theme-text-muted font-bold';
+                    moreDiv.innerText = I18n.t('loading_more') || "...";
+                    l.appendChild(moreDiv);
+
+                    const observer = new IntersectionObserver((entries) => {
+                        if (entries[0].isIntersecting) {
+                            state.historyLimit += 50;
+                            UI.renderHistory();
+                            observer.disconnect();
+                        }
+                    }, { threshold: 0.1 });
+                    observer.observe(moreDiv);
                 }
             },
 
@@ -2148,6 +2176,18 @@
             },
 
             renderReports: () => {
+                UI.updateReportChart();
+            },
+
+            formatCurrencyInput: (input) => {
+                // Disabled by user request
+            },
+
+            parseCurrency: (str) => {
+                return parseFloat(str) || 0;
+            },
+
+            updateReportChart: async () => {
                 const start = document.getElementById('rpt-start').value; const end = document.getElementById('rpt-end').value; const type = document.getElementById('rpt-type').value;
                 if (!start || !end) return;
 
@@ -2330,7 +2370,10 @@
         const BackupManager = {
             exportJSON: async () => {
                 const dataStr = JSON.stringify(store, null, 2);
-                const fileName = `backup_gastos_${new Date().getTime()}.json`;
+                const now = new Date();
+                const yymmdd = now.toISOString().slice(2, 10).replace(/-/g, '');
+                const hhmm = now.toTimeString().slice(0, 5).replace(':', '');
+                const fileName = `bk-SmartFinance-${yymmdd}-${hhmm}.json`;
                 try {
                     if (!window.Capacitor) throw new Error("Modo Web");
                     const result = await Capacitor.Plugins.Filesystem.writeFile({ path: fileName, data: dataStr, directory: 'CACHE', encoding: 'utf8' });
@@ -2373,7 +2416,7 @@
 
                             if (type === 'INGRESO') {
                                 store.incomes.push({
-                                    id: crypto.randomUUID(),
+                                    id: App.uuid(),
                                     date: dateISO,
                                     description: desc.replace(/"/g, ''),
                                     total: cleanNum(total)
@@ -2405,7 +2448,7 @@
 
                                 if (catId) {
                                     store.transactions.push({
-                                        id: crypto.randomUUID(),
+                                        id: App.uuid(),
                                         date: dateISO,
                                         categoryId: catId,
                                         category: catNombre,
@@ -2428,10 +2471,31 @@
             },
             exportSelected: async () => {
                 const selTx = store.transactions.filter(t => state.selectedTx.has(t.id));
-                if (selTx.length) await BackupManager.generateCSV(selTx, "seleccion.csv");
+                if (selTx.length) await BackupManager.generateCSV(selTx);
                 state.selectedTx.clear(); document.getElementById('chk-all').checked = false; UI.renderHistory(); UI.updateHistoryHeader();
             },
-            generateCSV: async (d, fname = "export.csv") => {
+            generateCSV: async (dataToExport = null) => {
+                // If no specific data passed, export ALL transactions + incomes (Merged)
+                let d = dataToExport;
+                const now = new Date();
+                const yymmdd = now.toISOString().slice(2, 10).replace(/-/g, '');
+                const hhmm = now.toTimeString().slice(0, 5).replace(':', '');
+                const fname = `bk-SmartFinance-${yymmdd}-${hhmm}.csv`;
+
+                if (!d) {
+                    // Export Full DB
+                    const allExp = store.transactions || [];
+                    const allInc = store.incomes || [];
+                    const normalizedInc = allInc.map(i => ({
+                        date: i.date,
+                        category: '', group: '',
+                        description: i.description,
+                        quantity: 1, unitValue: i.total, total: i.total,
+                        serviceId: null, isIncome: true
+                    }));
+                    d = [...allExp, ...normalizedInc].sort((a, b) => b.date.localeCompare(a.date));
+                }
+
                 if (!d || !d.length) return Swal.fire('Info', I18n.t('err_no_export'), 'info');
                 let csv = "Fecha;Tipo;Categoría;Grupo;Descripción;Cantidad;Valor Unitario;Total;Recurrente\n";
                 d.forEach(t => {
@@ -2544,7 +2608,10 @@
             }
         };
 
-        App.init();
+        App.init().then(() => {
+            // Set default report range to 'This Month' (highlight button)
+            setTimeout(() => App.setReportRange(1), 500);
+        });
     </script>
 </body>
 

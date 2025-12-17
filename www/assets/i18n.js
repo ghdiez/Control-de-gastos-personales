@@ -189,7 +189,11 @@ const translations = {
         help_reports_title: "Reportes Inteligentes",
         help_reports_text: "Visualiza tus gastos con gráficos interactivos. Usa 'Líneas Comparativas' para ver la evolución de grupos específicos.",
         help_pivot_title: "Tablas Dinámicas",
-        help_pivot_text: "Analiza a fondo. Cruza información (ej: Grupo vs Mes) para ver totatles detallados. Usa los selectores para cambiar filas y columnas."
+        help_reports_text: "Visualiza tus gastos con gráficos interactivos. Usa 'Líneas Comparativas' para ver la evolución de grupos específicos.",
+        help_pivot_title: "Tablas Dinámicas",
+        help_pivot_text: "Analiza a fondo. Cruza información (ej: Grupo vs Mes) para ver totatles detallados. Usa los selectores para cambiar filas y columnas.",
+        link_service_optional: "Vincular a Servicio (Opcional)",
+        loading_more: "Cargando más..."
     },
     en: {
         app_title: "SmartFinance",
@@ -376,7 +380,9 @@ const translations = {
         lbl_goal_green: "Goal (Green)",
         adjust_bal_label: "System Balance: $ {bal}. Enter real balance:",
         lbl_h_expenses: "EXPENSES",
-        lbl_h_incomes: "INCOME"
+        lbl_h_incomes: "INCOME",
+        link_service_optional: "Link to Service (Optional)",
+        loading_more: "Loading more..."
     },
     pt: {
         app_title: "SmartFinance",
@@ -562,7 +568,9 @@ const translations = {
         help_reports_title: "Relatórios Inteligentes",
         help_reports_text: "Visualize despesas com gráficos interativos. Use 'Linhas Comparativas' para ver a evolução de grupos.",
         help_pivot_title: "Tabelas Dinâmicas",
-        help_pivot_text: "Análise profunda. Cruize informações (ex: Grupo vs Mês). Use os seletores para personalizar linhas e colunas."
+        help_pivot_text: "Análise profunda. Cruize informações (ex: Grupo vs Mês). Use os seletores para personalizar linhas e colunas.",
+        link_service_optional: "Vincular a Serviço (Opcional)",
+        loading_more: "Carregando mais..."
     }
 };
 
