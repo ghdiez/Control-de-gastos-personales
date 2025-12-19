@@ -346,7 +346,8 @@
 
                 <button onclick="I18n.toggleLanguage()" class="transition transform hover:scale-110"
                     id="btn-lang-toggle">
-                    <img src="assets/flags/co.png" class="w-10 h-7 rounded shadow-md border border-white object-cover">
+                    <img src="assets/flags/co.png" style="width: 60px; height: 42px;"
+                        class="rounded shadow-md border border-white object-cover">
                 </button>
 
                 <button onclick="UI.ThemeManager.toggle()"
@@ -1009,6 +1010,7 @@
                     }
 
                     App.setReportRange(1);
+                    App.checkAutoBackup();
                     document.getElementById('inp-date').value = new Date().toLocaleDateString('en-CA');
                     UI.renderCategoriesSelect(); UI.renderServicesConfig(); UI.renderCategoriesConfig(); UI.renderDeepFilters(); UI.renderSettings();
                     UI.ThemeManager.init();
@@ -1019,6 +1021,14 @@
                     if (!await localforage.getItem('gastosApp_data') && localStorage.getItem('gastosApp_data')) {
                         await App.save();
                     }
+
+                    // Backup on Minimize (Background)
+                    document.addEventListener('visibilitychange', () => {
+                        if (document.visibilityState === 'hidden') {
+                            console.log("App hidden (minimized) -> Triggering Backup");
+                            BackupManager.exportJSON(true);
+                        }
+                    });
 
                 } catch (err) {
                     alert("Error starting app: " + err.message + "\nStack: " + err.stack);
@@ -1074,6 +1084,17 @@
                     confirmButtonText: I18n.t('btn_close'),
                     customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl' }
                 });
+            },
+
+            checkAutoBackup: () => {
+                const last = localStorage.getItem('gastos_last_backup');
+                const now = new Date();
+                const today = now.toISOString().split('T')[0];
+                if (last !== today) {
+                    console.log("Running auto backup...");
+                    BackupManager.exportJSON(true); // silent
+                    localStorage.setItem('gastos_last_backup', today);
+                }
             },
 
             showGuide: () => {
@@ -1992,8 +2013,8 @@
 
             updateDashboard: () => {
                 // Balance Calculation
-                const totalInc = (store.incomes || []).reduce((s, i) => s + i.total, 0);
-                const totalExp = store.transactions.reduce((s, t) => s + t.total, 0);
+                const totalInc = (store.incomes || []).reduce((s, i) => s + (i.total || 0), 0);
+                const totalExp = store.transactions.reduce((s, t) => s + (t.total || 0), 0);
                 const balance = totalInc - totalExp;
 
                 const balEl = document.getElementById('dash-balance');
@@ -2018,7 +2039,7 @@
                 const now = new Date();
                 const prefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
                 const mTx = store.transactions.filter(t => t.date.startsWith(prefix));
-                document.getElementById('dash-total').innerText = "$ " + mTx.reduce((s, t) => s + t.total, 0).toLocaleString(locale);
+                document.getElementById('dash-total').innerText = "$ " + mTx.reduce((s, t) => s + (t.total || 0), 0).toLocaleString(locale);
                 document.getElementById('dash-count').innerText = `${mTx.length}`;
 
                 // Alerts Logic
@@ -2069,7 +2090,7 @@
                                             <p class="text-[10px] theme-text-secondary">${t.date}</p>
                                         </div>
                                     </div>
-                                    <span class="text-sm font-bold theme-text-primary">$ ${t.total.toLocaleString()}</span>
+                                    <span class="text-sm font-bold theme-text-primary">$ ${(t.total || 0).toLocaleString()}</span>
                                 </div>
                             `;
                         });
@@ -2125,7 +2146,7 @@
                     const isInc = !t.categoryId;
                     const sign = isInc ? '+' : '-';
                     const colorClass = isInc ? 'text-green-600' : 'theme-text-primary';
-                    const amountStr = t.total.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+                    const amountStr = (t.total || 0).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
                     const icon = isInc ? 'fas fa-arrow-up' : App.getIcon(t.category);
                     const bg = isInc ? 'bg-green-100 text-green-600' : 'theme-bg-accent-light theme-text-accent';
 
@@ -2383,20 +2404,72 @@
         };
 
         const BackupManager = {
-            exportJSON: async () => {
-                const dataStr = JSON.stringify(store, null, 2);
+            exportJSON: async (isAuto = false) => {
+                // FORCE: Create a clean copy and sort everything chronologically (Newest First)
+                const dataCopy = JSON.parse(JSON.stringify(store));
+
+                // Sort Transactions: Date Descending (Newest -> Oldest)
+                if (dataCopy.transactions && Array.isArray(dataCopy.transactions)) {
+                    dataCopy.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+                }
+
+                // Sort Incomes: Date Descending (Newest -> Oldest)
+                if (dataCopy.incomes && Array.isArray(dataCopy.incomes)) {
+                    dataCopy.incomes.sort((a, b) => new Date(b.date) - new Date(a.date));
+                }
+
+                const dataStr = JSON.stringify(dataCopy, null, 2);
                 const now = new Date();
                 const yymmdd = now.toISOString().slice(2, 10).replace(/-/g, '');
                 const hhmm = now.toTimeString().slice(0, 5).replace(':', '');
-                const fileName = `bk-SmartFinance-${yymmdd}-${hhmm}.json`;
+                const fileName = `SmartFinance-${yymmdd}-${hhmm}.json`;
                 try {
-                    if (!window.Capacitor) throw new Error("Modo Web");
-                    const result = await Capacitor.Plugins.Filesystem.writeFile({ path: fileName, data: dataStr, directory: 'CACHE', encoding: 'utf8' });
+                    if (!window.Capacitor) {
+                        if (isAuto) return;
+                        throw new Error("Modo Web");
+                    }
+
+                    let dir = 'DOCUMENTS';
+                    let useSubDir = true;
+                    let result;
+
+                    // 1. Try Creating/Using "SmartFinance" folder in Documents
+                    try {
+                        await Capacitor.Plugins.Filesystem.mkdir({ path: 'SmartFinance', directory: dir, recursive: true });
+                        result = await Capacitor.Plugins.Filesystem.writeFile({ path: 'SmartFinance/' + fileName, data: dataStr, directory: dir, encoding: 'utf8' });
+                    } catch (e) {
+                        console.warn("Could not write to Documents/SmartFinance, trying root Documents...", e);
+                        // 2. Fallback to root Documents
+                        useSubDir = false;
+                        try {
+                            result = await Capacitor.Plugins.Filesystem.writeFile({ path: fileName, data: dataStr, directory: dir, encoding: 'utf8' });
+                        } catch (e2) {
+                            // 3. Fallback to Cache
+                            console.warn("Could not write to Documents, trying Cache...", e2);
+                            dir = 'CACHE';
+                            result = await Capacitor.Plugins.Filesystem.writeFile({ path: fileName, data: dataStr, directory: dir, encoding: 'utf8' });
+                        }
+                    }
+
+                    if (isAuto) {
+                        const folderName = (dir === 'DOCUMENTS' ? (useSubDir ? 'Documents/SmartFinance' : 'Documents') : 'Cache (Interno)');
+                        // Enhanced Toast
+                        const Toast = Swal.mixin({ toast: true, position: 'top', showConfirmButton: false, timer: 5000, timerProgressBar: true });
+                        Toast.fire({
+                            icon: 'success',
+                            title: 'Backup Auto Realizado',
+                            html: `<div style="font-size:11px; margin-top:5px; color:#555; word-break:break-all;"><b>Archivo:</b> ${fileName}<br><b>Ruta:</b> ${folderName}</div>`
+                        });
+                        return;
+                    }
+
                     await Capacitor.Plugins.Share.share({ title: I18n.t('backup_title'), text: I18n.t('backup_json_desc'), url: result.uri, dialogTitle: I18n.t('backup_dialog') });
                 } catch (e) {
                     if (e.message && e.message.includes('canceled')) return;
                     if (e.message !== "Modo Web") alert("Error: " + e.message);
-                    const b = new Blob([dataStr], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = fileName; document.body.appendChild(a); a.click();
+                    if (!isAuto) {
+                        const b = new Blob([dataStr], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = fileName; document.body.appendChild(a); a.click();
+                    }
                 }
             },
             importJSON: (i) => { const f = i.files[0]; if (!f) return; const r = new FileReader(); r.onload = e => { try { store = JSON.parse(e.target.result); localStorage.setItem('gastosApp_data', JSON.stringify(store)); Swal.fire(I18n.t('msg_restored'), 'OK', 'success').then(() => location.reload()); } catch (x) { Swal.fire('Error', I18n.t('err_json_bad'), 'error'); } }; r.readAsText(f); },
