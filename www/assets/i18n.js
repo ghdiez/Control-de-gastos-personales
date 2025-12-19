@@ -611,7 +611,7 @@ const I18n = {
         // Update Flag
         const flags = { 'es': 'assets/flags/co.png', 'en': 'assets/flags/us.png', 'pt': 'assets/flags/br.png' };
         const btn = document.getElementById('btn-lang-toggle');
-        if (btn) btn.innerHTML = `<img src="${flags[lang]}" class="w-6 h-4 rounded shadow-sm border border-white">`;
+        if (btn) btn.innerHTML = `<img src="${flags[lang]}" style="width: 60px !important; height: 42px !important; max-width: none !important;" class="rounded shadow-md border border-white object-cover">`;
 
         if (window.UI) {
             UI.renderCategoriesSelect();
@@ -629,7 +629,7 @@ const I18n = {
         // Update Flag on Init
         const flags = { 'es': 'assets/flags/co.png', 'en': 'assets/flags/us.png', 'pt': 'assets/flags/br.png' };
         const btn = document.getElementById('btn-lang-toggle');
-        if (btn && flags[I18n.currentLang]) btn.innerHTML = `<img src="${flags[I18n.currentLang]}" class="w-6 h-4 rounded shadow-sm border border-white">`;
+        if (btn && flags[I18n.currentLang]) btn.innerHTML = `<img src="${flags[I18n.currentLang]}" style="width: 60px !important; height: 42px !important; max-width: none !important;" class="rounded shadow-md border border-white object-cover">`;
 
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
