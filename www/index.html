@@ -1376,6 +1376,7 @@
                 if (!document.getElementById('detailed-input').classList.contains('hidden-section')) {
                     quantity = parseFloat(document.getElementById('inp-qty').value) || 0;
                     unitValue = UI.parseCurrency(document.getElementById('inp-unit').value) || 0;
+                    total = quantity * unitValue;
                 } else {
                     total = parseFloat(document.getElementById('inp-amount').value) || 0;
                     unitValue = total;
