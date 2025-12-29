@@ -3,6 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self' data: gap: https://ssl.gstatic.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; media-src *; img-src 'self' data: content:;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SmartFinance</title>
 
@@ -65,6 +67,10 @@
         input[type=number]::-webkit-outer-spin-button {
             -webkit-appearance: none;
             margin: 0;
+        }
+
+        input[type="date"] {
+            accent-color: var(--accent-color);
         }
 
         .checkbox-std {
@@ -213,6 +219,10 @@
 
         .theme-border {
             border-color: var(--border-color) !important;
+        }
+
+        .theme-border-accent {
+            border-color: var(--accent-color) !important;
         }
 
         .theme-bg-card {
@@ -554,8 +564,8 @@
 
                 <div class="grid grid-cols-2 gap-3 mt-8">
                     <button type="button" onclick="UI.discardForm()"
-                        class="w-full py-4 rounded-xl font-bold theme-text-secondary border theme-border hover:bg-gray-100 transition"
-                        data-i18n="discard_back">Descartar / Volver</button>
+                        class="w-full py-4 rounded-xl font-bold text-white theme-bg-accent shadow-lg transform active:scale-95 transition"
+                        data-i18n="discard_back">Descartar</button>
                     <button type="button" id="btn-save-tx" onclick="App.saveTx()"
                         class="w-full py-4 rounded-xl font-bold text-white theme-bg-accent shadow-lg transform active:scale-95 transition"
                         data-i18n="save">Guardar</button>
@@ -571,10 +581,10 @@
                     id="history-counter" class="theme-text-muted text-sm font-normal ml-2"></span></h2>
             <div id="actions-history" class="hidden-section flex gap-2">
                 <button onclick="BackupManager.exportSelected()"
-                    class="bg-green-600 text-white text-xs px-3 py-1 rounded font-bold shadow"><i
+                    class="bg-green-600 text-white text-xs px-4 py-3 rounded font-bold shadow"><i
                         class="fas fa-file-csv"></i> <span data-i18n="export">Exportar</span></button>
                 <button onclick="App.deleteSelected()"
-                    class="bg-red-500 text-white text-xs px-3 py-1 rounded font-bold shadow"><i
+                    class="bg-red-500 text-white text-xs px-4 py-3 rounded font-bold shadow"><i
                         class="fas fa-trash"></i> <span data-i18n="delete">Borrar</span></button>
             </div>
         </div>
@@ -866,7 +876,7 @@
 
             <div class="text-center mt-8 border-t theme-border pt-4">
                 <p class="font-bold theme-text-primary text-sm">SmartFinance App</p>
-                <p class="text-xs theme-text-muted">Versión 1.1.2</p>
+                <p class="text-xs theme-text-muted">Versión 1.0.1</p>
                 <p class="text-[10px] theme-text-muted mt-2">© GabHoX - ghdiez.01@gmail.com - 2025</p>
             </div>
         </div>
@@ -913,7 +923,7 @@
         <button onclick="App.nav('add')" class="nav-btn inactive-nav flex flex-col items-center w-full relative"
             id="btn-add">
             <div
-                class="theme-bg-accent text-white rounded-full w-14 h-14 flex items-center justify-center -mt-8 shadow-lg border-4 theme-border transition-transform active:scale-95">
+                class="theme-bg-accent text-white rounded-full w-16 h-16 flex items-center justify-center -mt-8 shadow-lg border-4 theme-border transition-transform active:scale-95">
                 <i class="fas fa-plus text-2xl"></i>
             </div>
         </button>
@@ -1012,7 +1022,9 @@
 
                     App.setReportRange(1);
                     App.checkAutoBackup();
-                    document.getElementById('inp-date').value = new Date().toLocaleDateString('en-CA');
+                    const now = new Date();
+                    const localDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                    document.getElementById('inp-date').value = localDate;
                     UI.renderCategoriesSelect(); UI.renderServicesConfig(); UI.renderCategoriesConfig(); UI.renderDeepFilters(); UI.renderSettings();
                     UI.ThemeManager.init();
                     NotificationManager.init();
@@ -1080,7 +1092,7 @@
             showAbout: () => {
                 Swal.fire({
                     title: I18n.t('about_title'),
-                    html: `<p class="text-sm text-gray-600">${I18n.t('copyright')}</p>`,
+                    html: `<p class="text-sm text-gray-600 mb-2">SmartFinance ver. 1.0.1</p><p class="text-xs text-gray-500">${I18n.t('copyright')}</p>`,
                     icon: 'info',
                     confirmButtonText: I18n.t('btn_close'),
                     customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl' }
@@ -1314,8 +1326,10 @@
             resetForm: () => {
                 state.editTxId = null; state.editIncId = null;
                 document.getElementById('form-add').reset();
-                document.getElementById('inp-date').value = new Date().toLocaleDateString('en-CA');
-                document.getElementById('form-add').reset();
+                const now = new Date();
+                const localDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                document.getElementById('inp-date').value = localDate;
+
                 state.editTxId = null; state.editIncId = null;
                 document.getElementById('inp-edit-id').value = "";
                 document.getElementById('form-title').innerText = I18n.t('reg_movement');
@@ -1951,11 +1965,11 @@
                 const btnInc = document.getElementById('btn-hist-income');
 
                 if (type === 'expense') {
-                    btnExp.className = "flex-1 py-1 text-sm font-bold rounded-md shadow-sm bg-white text-blue-600 transition";
-                    btnInc.className = "flex-1 py-1 text-sm font-bold rounded-md text-gray-500 hover:bg-gray-300 transition";
+                    btnExp.className = "flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-300 theme-bg-accent text-white shadow-sm";
+                    btnInc.className = "flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-300 theme-text-secondary hover:bg-gray-100";
                 } else {
-                    btnExp.className = "flex-1 py-1 text-sm font-bold rounded-md text-gray-500 hover:bg-gray-300 transition";
-                    btnInc.className = "flex-1 py-1 text-sm font-bold rounded-md shadow-sm bg-white text-green-600 transition";
+                    btnExp.className = "flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-300 theme-text-secondary hover:bg-gray-100";
+                    btnInc.className = "flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-300 theme-bg-accent text-white shadow-sm";
                 }
 
                 UI.renderHistory();
@@ -2474,7 +2488,31 @@
                     }
                 }
             },
-            importJSON: (i) => { const f = i.files[0]; if (!f) return; const r = new FileReader(); r.onload = e => { try { store = JSON.parse(e.target.result); localStorage.setItem('gastosApp_data', JSON.stringify(store)); Swal.fire(I18n.t('msg_restored'), 'OK', 'success').then(() => location.reload()); } catch (x) { Swal.fire('Error', I18n.t('err_json_bad'), 'error'); } }; r.readAsText(f); },
+            importJSON: (i) => {
+                const f = i.files[0];
+                if (!f) return;
+                const r = new FileReader();
+                r.onload = async (e) => {
+                    try {
+                        const parsed = JSON.parse(e.target.result);
+
+                        // Validate basic structure
+                        if (!parsed.transactions || !parsed.settings) throw new Error("Invalid Format");
+
+                        store = parsed;
+
+                        // IMPORTANT: Save to BOTH Storages (Migration Consistency)
+                        await localforage.setItem('gastosApp_data', store);
+                        localStorage.setItem('gastosApp_data', JSON.stringify(store));
+
+                        Swal.fire(I18n.t('msg_restored'), 'OK', 'success').then(() => location.reload());
+                    } catch (x) {
+                        console.error(x);
+                        Swal.fire('Error', I18n.t('err_json_bad'), 'error');
+                    }
+                };
+                r.readAsText(f);
+            },
             importCSV: (input) => {
                 const file = input.files[0]; if (!file) return;
                 Swal.fire({ title: I18n.t('msg_processing_csv'), didOpen: () => Swal.showLoading() });
