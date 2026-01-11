@@ -598,9 +598,15 @@
                 data-i18n="lbl_h_incomes">INGRESOS</button>
         </div>
 
-        <input type="text" id="search-history" onkeyup="UI.renderHistory()" placeholder="Buscar..."
-            data-i18n-placeholder="search_placeholder"
-            class="w-full theme-bg-card border theme-border rounded-xl py-3 px-4 mb-4 shadow-sm text-sm theme-text-primary outline-none focus:ring-2 focus:ring-green-400">
+        <div class="flex gap-2 mb-4">
+            <input type="text" id="search-history" onkeyup="UI.renderHistory()" placeholder="Buscar..."
+                data-i18n-placeholder="search_placeholder"
+                class="flex-1 theme-bg-card border theme-border rounded-xl py-3 px-4 shadow-sm text-sm theme-text-primary outline-none focus:ring-2 focus:ring-green-400">
+            <select id="sel-history-cat" onchange="UI.renderHistory()"
+                class="w-1/3 theme-bg-card border theme-border rounded-xl py-3 px-2 shadow-sm text-xs theme-text-primary font-bold outline-none focus:ring-2 focus:ring-green-400">
+                <option value="">Todas</option>
+            </select>
+        </div>
 
         <div
             class="flex justify-between items-center theme-bg-accent-light p-3 rounded-xl mb-3 text-xs theme-text-secondary font-bold border theme-border">
@@ -608,8 +614,9 @@
                     onchange="App.toggleSelectAll(this)"></div>
             <div onclick="App.setSort('date')" class="cursor-pointer flex-1"><span data-i18n="sort_date">Fecha</span> <i
                     id="sort-icon-date" class="fas fa-sort ml-1"></i></div>
-            <div onclick="App.setSort('cat')" class="cursor-pointer flex-1"><span data-i18n="sort_cat">Cat.</span> <i
-                    id="sort-icon-cat" class="fas fa-sort ml-1 opacity-30"></i></div>
+            <div onclick="App.setSort('category')" class="cursor-pointer flex-1"><span data-i18n="sort_cat">Cat.</span>
+                <i id="sort-icon-category" class="fas fa-sort ml-1 opacity-30"></i>
+            </div>
             <div class="w-20 text-right"><span data-i18n="value">Valor</span></div>
         </div>
         <div id="history-list" class="space-y-2 pb-20"></div>
@@ -1887,7 +1894,19 @@
 
             discardForm: () => { App.discardForm(); },
 
-            renderCategoriesSelect: () => { const s = document.getElementById('inp-cat'); s.innerHTML = `<option value="">${I18n.t('select_option')}</option>`; store.categories.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.text = c.name; s.appendChild(o) }); },
+            renderCategoriesSelect: () => {
+                const s = document.getElementById('inp-cat');
+                s.innerHTML = `<option value="">${I18n.t('select_option')}</option>`;
+                const h = document.getElementById('sel-history-cat');
+                if (h) h.innerHTML = `<option value="">${I18n.t('all_cats') || 'Todas'}</option>`;
+
+                store.categories.forEach(c => {
+                    const o = document.createElement('option'); o.value = c.id; o.text = c.name; s.appendChild(o);
+                    if (h) {
+                        const oh = document.createElement('option'); oh.value = c.id; oh.text = c.name; h.appendChild(oh);
+                    }
+                });
+            },
 
             updateGroupsAndServices: () => {
                 const cid = document.getElementById('inp-cat').value, g = document.getElementById('inp-group'), c = store.categories.find(x => x.id === cid);
@@ -1959,6 +1978,16 @@
                 state.historyType = type;
                 state.selectedTx.clear();
                 document.getElementById('chk-all').checked = false;
+
+                // Toggle Category Filter Visibility
+                const catFilter = document.getElementById('sel-history-cat');
+                if (catFilter) {
+                    if (type === 'expense') catFilter.classList.remove('invisible'); // use invisible to keep layout or display none?
+                    // If I use hidden-section (display:none), the flex-1 search input will expand. This is GOOD.
+                    if (type === 'expense') catFilter.classList.remove('hidden-section');
+                    else catFilter.classList.add('hidden-section');
+                    catFilter.value = ""; // Reset filter
+                }
 
                 // Update Button Styles
                 const btnExp = document.getElementById('btn-hist-expense');
@@ -2139,8 +2168,17 @@
 
                 if (isExp) {
                     data = data.filter(t => (t.category || "").toLowerCase().includes(term) || t.description.toLowerCase().includes(term));
+                    // Category Filter
+                    const catFilter = document.getElementById('sel-history-cat').value;
+                    if (catFilter) {
+                        data = data.filter(t => t.categoryId === catFilter);
+                    }
                 } else {
                     data = data.filter(t => t.description.toLowerCase().includes(term));
+                    // Income doesn't have categoryId usually, but if we wanted to filter... currently income cats are not implemented fully.
+                    // We hide the filter for income or reset it?
+                    // For now, if user switches to Income, the dropdown might still show cats but filtering won't match anything effectively unless we clear it.
+                    // We should probably hide the dropdown if historyType is income.
                 }
 
                 data = data.sort((a, b) => {
@@ -2149,6 +2187,20 @@
                     if (state.historySort.dir === 'asc') return va > vb ? 1 : -1;
                     return va < vb ? 1 : -1;
                 });
+
+                // Update Sort Icons
+                const iconDate = document.getElementById('sort-icon-date');
+                const iconCat = document.getElementById('sort-icon-category');
+                if (iconDate && iconCat) { // Safety check
+                    if (state.historySort.key === 'date') {
+                        iconDate.className = state.historySort.dir === 'asc' ? "fas fa-sort-up ml-1" : "fas fa-sort-down ml-1";
+                        iconCat.className = "fas fa-sort ml-1 opacity-30";
+                    } else if (state.historySort.key === 'category') {
+                        iconCat.className = state.historySort.dir === 'asc' ? "fas fa-sort-up ml-1" : "fas fa-sort-down ml-1";
+                        iconCat.classList.remove('opacity-30');
+                        iconDate.className = "fas fa-sort ml-1 opacity-30";
+                    }
+                }
 
                 document.getElementById('history-counter').innerText = `(${data.length})`;
                 document.getElementById('actions-history').classList.toggle('hidden-section', state.selectedTx.size === 0);
