@@ -1,13 +1,15 @@
-const CACHE_NAME = 'gastos-app-v1';
+const CACHE_NAME = 'gastos-app-v2';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './assets/icon.png',
-  './assets/tailwind.js',
+  './assets/tailwind-built.css',
   './assets/fontawesome.js',
   './assets/chart.js',
-  './assets/sweetalert2.js'
+  './assets/sweetalert2.js',
+  './assets/i18n.js',
+  './assets/localforage.min.js'
 ];
 
 // 1. Instalación: Guardar archivos en la "Caja Fuerte" (Cache)

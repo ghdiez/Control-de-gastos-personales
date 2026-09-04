@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+/* Scan the app shell for the utility classes actually used at runtime,
+   including those built via string concatenation in inline <script> blocks. */
+@source "../index.html";

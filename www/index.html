@@ -12,20 +12,12 @@
     <link rel="icon" type="image/png" href="assets/icon.png">
     <meta name="theme-color" content="#1d4ed8">
 
-    <script src="assets/tailwind.js"></script>
+    <link rel="stylesheet" href="assets/tailwind-built.css">
     <script src="assets/fontawesome.js"></script>
     <script src="assets/chart.js"></script>
     <script src="assets/sweetalert2.js"></script>
     <script src="assets/i18n.js"></script>
     <script src="assets/localforage.min.js"></script>
-    <script>
-        // Suppress Tailwind CDN warning locally
-        const origConsoleWarn = console.warn;
-        console.warn = (...args) => {
-            if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
-            origConsoleWarn(...args);
-        };
-    </script>
     <style>
         body {
             font-family: 'Segoe UI', sans-serif;
@@ -78,6 +70,50 @@
             height: 18px;
             accent-color: #2563eb;
             cursor: pointer;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-switch .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: #d1d5db;
+            transition: .2s;
+            border-radius: 999px;
+        }
+
+        .toggle-switch .toggle-slider::before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #ffffff;
+            transition: .2s;
+            border-radius: 50%;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .toggle-switch input:checked+.toggle-slider {
+            background-color: var(--accent-color);
+        }
+
+        .toggle-switch input:checked+.toggle-slider::before {
+            transform: translateX(20px);
         }
 
         .alert-card:active {
@@ -387,7 +423,7 @@
                     Disponible</h2>
                 <p class="text-5xl font-bold mt-2 transition-colors duration-500 theme-text-primary" id="dash-balance">$
                     0</p>
-                <div class="flex items-center gap-4 mt-3 text-xs theme-text-secondary font-bold uppercase opacity-80">
+                <div id="dash-totals-row" class="flex items-center gap-4 mt-3 text-xs theme-text-secondary font-bold uppercase opacity-80">
                     <span><i class="fas fa-arrow-up text-green-500"></i> <span id="dash-total-inc">$ 0</span></span>
                     <span class="opacity-30">|</span>
                     <span><i class="fas fa-arrow-down text-red-500"></i> <span id="dash-total-exp">$ 0</span></span>
@@ -714,6 +750,64 @@
         <h2 class="text-xl font-bold theme-text-primary mb-6" data-i18n="configuration">Configuración</h2>
 
         <div class="theme-bg-card rounded-2xl shadow-lg mb-4 border theme-border overflow-hidden">
+            <div onclick="UI.toggleConfigSection('cfg-prefs')"
+                class="p-4 border-b theme-border flex justify-between items-center cursor-pointer hover:bg-opacity-50 hover:bg-gray-100 transition">
+                <span class="font-bold text-sm theme-text-primary"><i class="fas fa-sliders theme-text-accent mr-2"></i>
+                    <span data-i18n="cfg_preferences">Preferencias</span></span><i
+                    class="fas fa-chevron-down theme-text-muted"></i>
+            </div>
+            <div id="cfg-prefs" class="hidden-section p-4 theme-bg-accent-light space-y-4">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex-1">
+                        <label for="chk-show-totals" class="block text-sm font-bold theme-text-primary"
+                            data-i18n="show_totals">Mostrar totales de ingresos/gastos</label>
+                        <p class="text-xs theme-text-secondary opacity-80 mt-0.5" data-i18n="show_totals_hint">Muestra u
+                            oculta la fila de ingresos y gastos totales en la tarjeta de Saldo Disponible.</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="chk-show-totals" onchange="App.Settings.setShowTotals(this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="border-t theme-border pt-4 flex items-center justify-between gap-3">
+                    <div class="flex-1">
+                        <label for="chk-auto-backup" class="block text-sm font-bold theme-text-primary"
+                            data-i18n="auto_backup">Backup automático diario</label>
+                        <p class="text-xs theme-text-secondary opacity-80 mt-0.5" data-i18n="auto_backup_hint">Genera
+                            una copia de seguridad silenciosa al abrir o minimizar la app, una vez al día.</p>
+                        <p id="lbl-last-backup" class="text-[10px] theme-text-muted mt-1"></p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="chk-auto-backup" onchange="App.Settings.setAutoBackup(this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="border-t theme-border pt-4">
+                    <label class="block text-xs font-bold theme-text-muted uppercase mb-1" data-i18n="backup_dest">
+                        Carpeta de destino del backup</label>
+                    <select id="sel-backup-dir" onchange="App.Settings.setBackupDir(this.value)"
+                        class="w-full theme-bg-card border theme-border rounded-xl p-2 theme-text-primary text-sm outline-none">
+                        <option value="documents_subfolder" data-i18n="backup_dest_doc_sub">Documentos / SmartFinance
+                        </option>
+                        <option value="documents_root" data-i18n="backup_dest_doc_root">Documentos (raíz)</option>
+                        <option value="cache" data-i18n="backup_dest_cache">Caché interno</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold theme-text-muted uppercase mb-1" data-i18n="backup_filename_prefix">
+                        Nombre de archivo (prefijo)</label>
+                    <input type="text" id="inp-backup-prefix" maxlength="40"
+                        onchange="App.Settings.setBackupPrefix(this.value)"
+                        class="w-full theme-bg-card border theme-border rounded-xl p-2 theme-text-primary text-sm outline-none">
+                    <p id="lbl-backup-prefix-example" class="text-[10px] theme-text-muted mt-1"></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="theme-bg-card rounded-2xl shadow-lg mb-4 border theme-border overflow-hidden">
             <div onclick="UI.toggleConfigSection('cfg-cats')"
                 class="p-4 border-b theme-border flex justify-between items-center cursor-pointer hover:bg-opacity-50 hover:bg-gray-100 transition">
                 <span class="font-bold text-sm theme-text-primary"><i class="fas fa-tags theme-text-accent mr-2"></i>
@@ -883,8 +977,8 @@
 
             <div class="text-center mt-8 border-t theme-border pt-4">
                 <p class="font-bold theme-text-primary text-sm">SmartFinance App</p>
-                <p class="text-xs theme-text-muted">Versión 1.0.1</p>
-                <p class="text-[10px] theme-text-muted mt-2">© GabHoX - ghdiez.01@gmail.com - 2025</p>
+                <p class="text-xs theme-text-muted">Versión 1.5.0</p>
+                <p class="text-[10px] theme-text-muted mt-2">© GabHoX - ghdiez.01@gmail.com - 2026</p>
             </div>
         </div>
     </section>
@@ -950,7 +1044,11 @@
             transactions: [],
             incomes: [],
             settings: {
-                balanceThresholds: { min: 0, mid: 0 }
+                balanceThresholds: { min: 0, mid: 0 },
+                showTotals: true,
+                autoBackupEnabled: true,
+                backupDir: 'documents_subfolder',
+                backupFileNamePrefix: 'SmartFinance'
             },
             categories: [], // Populated dynamically
             recurringServices: []
@@ -1042,11 +1140,11 @@
                         await App.save();
                     }
 
-                    // Backup on Minimize (Background)
+                    // Backup on Minimize (Background) - routes through checkAutoBackup so it
+                    // respects the enabled flag and the once-a-day gate (avoids duplicate backups).
                     document.addEventListener('visibilitychange', () => {
                         if (document.visibilityState === 'hidden') {
-                            console.log("App hidden (minimized) -> Triggering Backup");
-                            BackupManager.exportJSON(true);
+                            App.checkAutoBackup();
                         }
                     });
 
@@ -1099,7 +1197,7 @@
             showAbout: () => {
                 Swal.fire({
                     title: I18n.t('about_title'),
-                    html: `<p class="text-sm text-gray-600 mb-2">SmartFinance ver. 1.0.1</p><p class="text-xs text-gray-500">${I18n.t('copyright')}</p>`,
+                    html: `<p class="text-sm text-gray-600 mb-2">SmartFinance ver. 1.5.0</p><p class="text-xs text-gray-500">${I18n.t('copyright')}</p>`,
                     icon: 'info',
                     confirmButtonText: I18n.t('btn_close'),
                     customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl' }
@@ -1107,6 +1205,7 @@
             },
 
             checkAutoBackup: () => {
+                if (!store.settings.autoBackupEnabled) return;
                 const last = localStorage.getItem('gastos_last_backup');
                 const now = new Date();
                 const today = now.toISOString().split('T')[0];
@@ -1114,6 +1213,28 @@
                     console.log("Running auto backup...");
                     BackupManager.exportJSON(true); // silent
                     localStorage.setItem('gastos_last_backup', today);
+                }
+            },
+
+            Settings: {
+                setShowTotals: (val) => {
+                    store.settings.showTotals = !!val;
+                    App.save();
+                },
+                setAutoBackup: (val) => {
+                    store.settings.autoBackupEnabled = !!val;
+                    App.save(true);
+                    UI.renderSettings();
+                },
+                setBackupDir: (val) => {
+                    store.settings.backupDir = val;
+                    App.save(true);
+                },
+                setBackupPrefix: (rawVal) => {
+                    const clean = (rawVal || '').replace(/[\\/:*?"<>|]/g, '').trim();
+                    store.settings.backupFileNamePrefix = clean || 'SmartFinance';
+                    App.save(true);
+                    UI.renderSettings();
                 }
             },
 
@@ -1328,6 +1449,7 @@
                 if (viewName === 'dashboard') UI.updateDashboard();
                 if (viewName === 'history') UI.renderHistory();
                 if (viewName === 'reportes') UI.renderReports();
+                if (viewName === 'config') UI.renderSettings();
             },
 
             resetForm: () => {
@@ -2079,6 +2201,7 @@
 
                 document.getElementById('dash-total-inc').innerText = "$ " + totalInc.toLocaleString(locale);
                 document.getElementById('dash-total-exp').innerText = "$ " + totalExp.toLocaleString(locale);
+                document.getElementById('dash-totals-row').classList.toggle('hidden-section', !store.settings.showTotals);
 
                 // Current Month Logic
                 const now = new Date();
@@ -2144,7 +2267,37 @@
             },
 
             renderSettings: () => {
-                // No remaining DOM elements to render in Config view for thresholds
+                const chkTotals = document.getElementById('chk-show-totals');
+                if (chkTotals) chkTotals.checked = !!store.settings.showTotals;
+
+                const chkBackup = document.getElementById('chk-auto-backup');
+                if (chkBackup) chkBackup.checked = !!store.settings.autoBackupEnabled;
+
+                const selDir = document.getElementById('sel-backup-dir');
+                if (selDir) selDir.value = store.settings.backupDir || 'documents_subfolder';
+
+                const prefix = store.settings.backupFileNamePrefix || 'SmartFinance';
+                const inpPrefix = document.getElementById('inp-backup-prefix');
+                if (inpPrefix) inpPrefix.value = prefix;
+
+                const now = new Date();
+                const yymmdd = now.toISOString().slice(2, 10).replace(/-/g, '');
+                const hhmm = now.toTimeString().slice(0, 5).replace(':', '');
+                const exEl = document.getElementById('lbl-backup-prefix-example');
+                if (exEl) exEl.innerText = I18n.t('backup_filename_example', { name: `${prefix}-${yymmdd}-${hhmm}.json` });
+
+                const lastEl = document.getElementById('lbl-last-backup');
+                if (lastEl) {
+                    const ts = localStorage.getItem('gastos_last_backup_ts');
+                    if (ts) {
+                        let locale = 'en-US';
+                        if (I18n.currentLang === 'es') locale = 'es-CO';
+                        if (I18n.currentLang === 'pt') locale = 'pt-BR';
+                        lastEl.innerText = I18n.t('last_backup_label', { date: new Date(ts).toLocaleString(locale) });
+                    } else {
+                        lastEl.innerText = I18n.t('last_backup_never');
+                    }
+                }
             },
 
             getCurrentHistoryIds: () => {
@@ -2490,7 +2643,8 @@
                 const now = new Date();
                 const yymmdd = now.toISOString().slice(2, 10).replace(/-/g, '');
                 const hhmm = now.toTimeString().slice(0, 5).replace(':', '');
-                const fileName = `SmartFinance-${yymmdd}-${hhmm}.json`;
+                const prefix = store.settings.backupFileNamePrefix || 'SmartFinance';
+                const fileName = `${prefix}-${yymmdd}-${hhmm}.json`;
                 try {
                     if (!window.Capacitor) {
                         if (isAuto) return;
@@ -2501,25 +2655,46 @@
                     let useSubDir = true;
                     let result;
 
-                    // 1. Try Creating/Using "SmartFinance" folder in Documents
-                    try {
-                        await Capacitor.Plugins.Filesystem.mkdir({ path: 'SmartFinance', directory: dir, recursive: true });
-                        result = await Capacitor.Plugins.Filesystem.writeFile({ path: 'SmartFinance/' + fileName, data: dataStr, directory: dir, encoding: 'utf8' });
-                    } catch (e) {
-                        console.warn("Could not write to Documents/SmartFinance, trying root Documents...", e);
-                        // 2. Fallback to root Documents
+                    const writeDocSubfolder = async () => {
+                        await Capacitor.Plugins.Filesystem.mkdir({ path: 'SmartFinance', directory: 'DOCUMENTS', recursive: true });
+                        return Capacitor.Plugins.Filesystem.writeFile({ path: 'SmartFinance/' + fileName, data: dataStr, directory: 'DOCUMENTS', encoding: 'utf8' });
+                    };
+                    const writeDocRoot = () => Capacitor.Plugins.Filesystem.writeFile({ path: fileName, data: dataStr, directory: 'DOCUMENTS', encoding: 'utf8' });
+                    const writeCache = () => Capacitor.Plugins.Filesystem.writeFile({ path: fileName, data: dataStr, directory: 'CACHE', encoding: 'utf8' });
+
+                    const destPref = store.settings.backupDir || 'documents_subfolder';
+
+                    if (destPref === 'documents_root') {
                         useSubDir = false;
                         try {
-                            result = await Capacitor.Plugins.Filesystem.writeFile({ path: fileName, data: dataStr, directory: dir, encoding: 'utf8' });
-                        } catch (e2) {
-                            // 3. Fallback to Cache
-                            console.warn("Could not write to Documents, trying Cache...", e2);
+                            result = await writeDocRoot();
+                        } catch (e) {
+                            console.warn("Could not write to Documents, trying Cache...", e);
                             dir = 'CACHE';
-                            result = await Capacitor.Plugins.Filesystem.writeFile({ path: fileName, data: dataStr, directory: dir, encoding: 'utf8' });
+                            result = await writeCache();
+                        }
+                    } else if (destPref === 'cache') {
+                        dir = 'CACHE'; useSubDir = false;
+                        result = await writeCache();
+                    } else {
+                        // Default: Documents/SmartFinance, with cascading fallback (original behavior)
+                        try {
+                            result = await writeDocSubfolder();
+                        } catch (e) {
+                            console.warn("Could not write to Documents/SmartFinance, trying root Documents...", e);
+                            useSubDir = false;
+                            try {
+                                result = await writeDocRoot();
+                            } catch (e2) {
+                                console.warn("Could not write to Documents, trying Cache...", e2);
+                                dir = 'CACHE';
+                                result = await writeCache();
+                            }
                         }
                     }
 
                     if (isAuto) {
+                        localStorage.setItem('gastos_last_backup_ts', now.toISOString());
                         const folderName = (dir === 'DOCUMENTS' ? (useSubDir ? 'Documents/SmartFinance' : 'Documents') : 'Cache (Interno)');
                         // Enhanced Toast
                         const Toast = Swal.mixin({ toast: true, position: 'top', showConfirmButton: false, timer: 5000, timerProgressBar: true });
@@ -2660,7 +2835,8 @@
                 const now = new Date();
                 const yymmdd = now.toISOString().slice(2, 10).replace(/-/g, '');
                 const hhmm = now.toTimeString().slice(0, 5).replace(':', '');
-                const fname = `bk-SmartFinance-${yymmdd}-${hhmm}.csv`;
+                const prefix = store.settings.backupFileNamePrefix || 'SmartFinance';
+                const fname = `bk-${prefix}-${yymmdd}-${hhmm}.csv`;
 
                 if (!d) {
                     // Export Full DB

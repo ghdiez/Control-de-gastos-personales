@@ -1,10 +1,12 @@
 {
   "name": "gastosappbuild",
-  "version": "1.2.2",
+  "version": "1.5.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "sync-version": "node scripts/sync-version.js",
+    "build:css": "tailwindcss -i ./www/assets/tailwind-src.css -o ./www/assets/tailwind-built.css --minify"
   },
   "keywords": [],
   "author": "",
@@ -17,5 +19,9 @@
     "@capacitor/filesystem": "^7.1.4",
     "@capacitor/local-notifications": "^7.0.3",
     "@capacitor/share": "^7.0.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "tailwindcss": "^4.3.3"
   }
 }

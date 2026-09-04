@@ -39,7 +39,7 @@
     *   🌑 **Modo Oscuro** (Elegante y cómodo para la vista).
     *   ☀️ **Modo Claro** (Clásico y nítido).
     *   🌗 **Alto Contraste** (Accesibilidad).
-*   **Personalización**: Define tus propios límites de alerta de gastos.
+*   **Personalización**: Define tus propios límites de alerta de gastos, muestra u oculta los totales de ingresos/gastos, y controla el backup automático diario (activación, carpeta de destino y nombre de archivo) desde Ajustes → Preferencias.
 
 ---
 
@@ -48,7 +48,7 @@
 Proyecto construido con tecnologías web estándar, empaquetado para móvil:
 
 *   **Core**: HTML5, Vanilla JavaScript (ES6+).
-*   **Estilos**: [Tailwind CSS](https://tailwindcss.com/) (vía CDN para desarrollo ágil).
+*   **Estilos**: [Tailwind CSS](https://tailwindcss.com/) v4, compilado a un archivo estático (`www/assets/tailwind-built.css`) — sin JIT en tiempo de ejecución.
 *   **Mobile Engine**: [Capacitor](https://capacitorjs.com/) (convierte la Web App en APK nativa).
 *   **Librerías**:
     *   *SweetAlert2* (Alertas modales hermosas).
@@ -76,13 +76,18 @@ Proyecto construido con tecnologías web estándar, empaquetado para móvil:
     npm install
     ```
 
-3.  **Ejecutar en Web (Desarrollo)**:
+3.  **Compilar el CSS de Tailwind** (requerido tras instalar, y cada vez que agregues/cambies clases de Tailwind en `www/index.html`):
+    ```bash
+    npm run build:css
+    ```
+
+4.  **Ejecutar en Web (Desarrollo)**:
     ```bash
     npx http-server www
     ```
     Abre tu navegador en la URL mostrada (usualmente `http://127.0.0.1:8080`).
 
-4.  **Compilar para Android**:
+5.  **Compilar para Android**:
     ```bash
     # Sincronizar cambios de 'www' a la carpeta nativa android
     npx cap sync android
@@ -93,6 +98,11 @@ Proyecto construido con tecnologías web estándar, empaquetado para móvil:
     # O compilar directamente desde terminal (Windows Powershell)
     cd android
     .\gradlew assembleDebug
+    ```
+
+6.  **Actualizar el número de versión** (tras cambiar `"version"` en `package.json`, sincroniza `build.gradle` y los textos de la app):
+    ```bash
+    npm run sync-version
     ```
 
 ---
