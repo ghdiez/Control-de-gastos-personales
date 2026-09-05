@@ -645,7 +645,7 @@
         <div id="history-list" class="space-y-2 pb-20"></div>
     </section>
 
-    <section id="view-reportes" class="p-4 hidden-section fade-in">
+    <section id="view-reportes" class="p-4 pb-24 hidden-section fade-in">
         <h2 class="text-xl font-bold theme-text-primary mb-4" data-i18n="smart_reports">Reportes Inteligentes</h2>
         <div class="theme-bg-card rounded-2xl shadow-lg p-4 mb-4 border theme-border">
             <div class="grid grid-cols-2 gap-3 mb-4">
@@ -704,8 +704,8 @@
             </details>
 
             <div>
-                <label class="text-[10px] font-bold theme-text-muted uppercase mb-1 block"
-                    data-i18n="chart_type">Gráfico</label>
+                <label class="text-[10px] font-bold theme-text-muted mb-1 block"
+                    data-i18n="chart_type">Tipo de gráfico</label>
                 <select id="rpt-type"
                     class="w-full border theme-border rounded-xl p-2 text-xs theme-bg-accent-light theme-text-primary font-bold outline-none"
                     onchange="UI.renderReports()">
@@ -720,16 +720,73 @@
             </div>
         </div>
         <div class="theme-bg-card rounded-2xl shadow-lg p-3 mb-4 border theme-border">
+            <div id="chart-cat-chips" class="flex flex-wrap gap-1.5 mb-2 min-h-[22px]"></div>
             <div class="h-64"><canvas id="chart-main"></canvas></div>
-            <div id="chart-legend" class="flex flex-wrap gap-2 justify-center mt-2 min-h-[20px]"></div>
+            <div id="chart-legend" class="flex flex-wrap gap-3 justify-center items-center mt-2 min-h-[20px]"></div>
+            <div id="chart-legend-hint" class="hidden-section text-center text-[9px] theme-text-muted mt-0.5" data-i18n="customize_hint">
+                Toca el color de una serie para cambiar su color, estilo y grosor</div>
+            <div class="flex justify-end mt-1">
+                <button onclick="UI.toggleChartTable()" id="btn-toggle-table"
+                    class="text-[10px] font-bold theme-text-accent underline" data-i18n="view_as_table">Ver como
+                    tabla</button>
+            </div>
+            <div id="chart-table-wrap" class="hidden-section mt-2 overflow-x-auto">
+                <table id="chart-table" class="w-full text-[11px] theme-text-primary"></table>
+            </div>
+        </div>
+        <div id="style-popover" class="hidden-section fixed z-50 theme-bg-card border theme-border rounded-xl shadow-lg p-3"
+            style="width:190px;">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-[10px] font-bold theme-text-muted uppercase" id="style-popover-title">--</span>
+                <button onclick="UI.StyleEditor.close()" class="theme-text-muted text-xs"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                    <label class="text-[10px] theme-text-secondary font-bold" data-i18n="color">Color</label>
+                    <input type="color" id="style-color" class="w-8 h-6 rounded border theme-border p-0">
+                </div>
+                <div id="style-line-only">
+                    <div class="flex items-center justify-between mt-2">
+                        <label class="text-[10px] theme-text-secondary font-bold" data-i18n="line_style">Estilo</label>
+                        <select id="style-dash"
+                            class="text-[10px] theme-bg-accent-light border theme-border rounded-lg px-1 py-1 theme-text-primary outline-none">
+                            <option value="solid" data-i18n="solid">Sólida</option>
+                            <option value="dashed" data-i18n="dashed">Punteada</option>
+                            <option value="dotted" data-i18n="dotted">Discontinua</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center justify-between mt-2">
+                        <label class="text-[10px] theme-text-secondary font-bold" data-i18n="line_width">Grosor</label>
+                        <input type="range" id="style-width" min="1" max="5" step="1" class="w-20">
+                    </div>
+                </div>
+                <button onclick="UI.StyleEditor.reset()"
+                    class="text-[10px] theme-text-accent underline w-full text-center font-bold mt-2"
+                    data-i18n="reset_default">Restablecer</button>
+            </div>
         </div>
         <div class="theme-bg-card rounded-2xl shadow-lg p-4 mb-6 border theme-border">
             <div class="flex justify-between items-center"><span class="text-xs theme-text-muted font-bold uppercase"
-                    data-i18n="total_period">Total Periodo:</span><span class="text-xl font-bold theme-text-primary"
-                    id="rpt-total-sum">$ 0</span></div>
+                    data-i18n="total_period">Total Periodo:</span>
+                <div class="flex items-center gap-2">
+                    <span id="rpt-delta" class="text-[10px] font-bold px-1.5 py-0.5 rounded-full"></span>
+                    <span class="text-xl font-bold theme-text-primary" id="rpt-total-sum">$ 0</span>
+                </div>
+            </div>
             <div class="flex justify-between items-center mt-2 border-t theme-border pt-2"><span
                     class="text-xs theme-text-muted font-bold uppercase" data-i18n="avg_monthly">Promedio
                     Mensual:</span><span class="text-sm font-bold theme-text-secondary" id="rpt-avg">$ 0</span></div>
+            <div class="flex justify-between items-center mt-2 border-t theme-border pt-2">
+                <label for="rpt-compare-mode" class="text-[10px] font-bold theme-text-muted uppercase"
+                    data-i18n="compare_mode">Comparar vs:</label>
+                <select id="rpt-compare-mode" onchange="UI.renderReports()"
+                    class="text-[10px] font-bold theme-bg-accent-light border theme-border rounded-lg px-2 py-1 theme-text-primary outline-none">
+                    <option value="days" data-i18n="compare_days">Mismos días antes</option>
+                    <option value="month" data-i18n="compare_month">Mes calendario anterior</option>
+                    <option value="year" data-i18n="compare_year">Mismo rango, año anterior</option>
+                </select>
+            </div>
         </div>
     </section>
 
@@ -1038,7 +1095,8 @@
                 backupFileNamePrefix: 'SmartFinance'
             },
             categories: [], // Populated dynamically
-            recurringServices: []
+            recurringServices: [],
+            chartStyles: {} // { [categoryId|groupName]: { color, dash, width } }
         };
 
         const DEFAULTS_BY_LANG = {
@@ -1078,7 +1136,7 @@
         };
 
         let store = { ...DEFAULT_DATA };
-        let state = { editTxId: null, editIncId: null, historySort: { key: 'date', dir: 'desc' }, selectedTx: new Set(), reportChart: null, filteredCount: 0, filterCats: new Set(), filterGroups: new Set(), historyType: 'expense', historyLimit: 50 };
+        let state = { editTxId: null, editIncId: null, historySort: { key: 'date', dir: 'desc' }, selectedTx: new Set(), reportChart: null, filteredCount: 0, filterCats: new Set(), filterGroups: new Set(), historyType: 'expense', historyLimit: 50, hiddenSeries: new Set(), reportTableOn: false, lastChartData: null };
 
         const App = {
             init: async () => {
@@ -1117,7 +1175,7 @@
                     const now = new Date();
                     const localDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
                     document.getElementById('inp-date').value = localDate;
-                    UI.renderCategoriesSelect(); UI.renderServicesConfig(); UI.renderCategoriesConfig(); UI.renderDeepFilters(); UI.renderSettings();
+                    UI.renderCategoriesSelect(); UI.renderServicesConfig(); UI.renderCategoriesConfig(); UI.renderDeepFilters(); UI.renderChartCatChips(); UI.renderSettings();
                     UI.ThemeManager.init();
                     NotificationManager.init();
 
@@ -1388,7 +1446,10 @@
                 }
 
                 // Reports
-                if (!document.getElementById('view-reportes').classList.contains('hidden-section')) UI.renderReports();
+                if (!document.getElementById('view-reportes').classList.contains('hidden-section')) {
+                    UI.renderChartCatChips();
+                    UI.renderReports();
+                }
             },
 
             getIcon: (catName) => {
@@ -1458,7 +1519,7 @@
                 }
                 if (viewName === 'dashboard') UI.updateDashboard();
                 if (viewName === 'history') UI.renderHistory();
-                if (viewName === 'reportes') UI.renderReports();
+                if (viewName === 'reportes') { UI.renderChartCatChips(); UI.renderReports(); }
                 if (viewName === 'config') UI.renderSettings();
             },
 
@@ -2270,6 +2331,7 @@
                     chk.onchange = (e) => {
                         if (e.target.checked) state.filterCats.add(c.id); else state.filterCats.delete(c.id);
                         UI.renderDeepFilters(); // Re-render to update groups if generic logic changed, or just update reports
+                        UI.renderChartCatChips();
                         UI.renderReports();
                     };
                     div.appendChild(chk);
@@ -2305,7 +2367,29 @@
                 state.filterCats.clear();
                 state.filterGroups.clear();
                 UI.renderDeepFilters();
+                UI.renderChartCatChips();
                 UI.renderReports();
+            },
+
+            renderChartCatChips: () => {
+                const cont = document.getElementById('chart-cat-chips');
+                if (!cont) return;
+                cont.innerHTML = "";
+                store.categories.forEach(c => {
+                    const active = state.filterCats.has(c.id);
+                    const chip = document.createElement('button');
+                    chip.type = "button";
+                    chip.className = "text-[10px] font-bold px-2.5 py-1 rounded-full border transition " +
+                        (active ? "theme-bg-accent-light theme-text-accent border-current" : "theme-bg-card theme-text-muted theme-border opacity-70");
+                    chip.innerText = c.name;
+                    chip.onclick = () => {
+                        if (active) state.filterCats.delete(c.id); else state.filterCats.add(c.id);
+                        UI.renderDeepFilters();
+                        UI.renderChartCatChips();
+                        UI.renderReports();
+                    };
+                    cont.appendChild(chip);
+                });
             },
 
             updateDashboard: () => {
@@ -2579,9 +2663,32 @@
                 return parseFloat(str) || 0;
             },
 
+            // ---- Chart styling helpers (color/dash/width per category or group, item 2) ----
+            _fmtShort: (v) => {
+                if (Math.abs(v) >= 1000000) return '$' + (v / 1000000).toFixed(1) + 'M';
+                if (Math.abs(v) >= 1000) return '$' + (v / 1000).toFixed(0) + 'K';
+                return '$' + v;
+            },
+            _paletteColor: (i) => ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280', '#ec4899', '#14b8a6', '#6366f1', '#f43f5e', '#84cc16'][i % 11],
+            _dashArray: (dash) => dash === 'dashed' ? [6, 4] : dash === 'dotted' ? [2, 3] : [],
+            // A stable key so a color/style survives across chart types: category id when the
+            // plotted dimension is "category", the raw group name when it's "group".
+            _styleKeyFor: (name, isCategoryDim) => {
+                if (isCategoryDim) {
+                    const cat = store.categories.find(c => c.name === name);
+                    return cat ? cat.id : name;
+                }
+                return name;
+            },
+
             updateReportChart: async () => {
                 const start = document.getElementById('rpt-start').value; const end = document.getElementById('rpt-end').value; const type = document.getElementById('rpt-type').value;
                 if (!start || !end) return;
+                // Close the style popover only on a genuine chart-type switch (its dash/width controls
+                // only apply to line charts) — NOT on every re-render, since editing a color/dash/width
+                // triggers App.save() -> refreshAll() -> this function while the popover is still in use.
+                if (UI._lastRenderedType !== undefined && UI._lastRenderedType !== type) UI.StyleEditor.close();
+                UI._lastRenderedType = type;
 
                 // Base Date Filter
                 let filtered = store.transactions.filter(t => t.date >= start && t.date <= end);
@@ -2601,10 +2708,48 @@
                 const diffTime = new Date(end) - new Date(start); const months = Math.max(diffTime / (1000 * 60 * 60 * 24 * 30), 1);
                 document.getElementById('rpt-avg').innerText = "$ " + Math.round(sum / months).toLocaleString();
 
+                // Delta vs. previous period (item 5)
+                const compareMode = document.getElementById('rpt-compare-mode').value;
+                const startD = new Date(start), endD = new Date(end);
+                let prevStart, prevEnd;
+                if (compareMode === 'month') {
+                    prevEnd = new Date(startD.getFullYear(), startD.getMonth(), 0);
+                    prevStart = new Date(prevEnd.getFullYear(), prevEnd.getMonth(), 1);
+                } else if (compareMode === 'year') {
+                    prevStart = new Date(startD); prevStart.setFullYear(prevStart.getFullYear() - 1);
+                    prevEnd = new Date(endD); prevEnd.setFullYear(prevEnd.getFullYear() - 1);
+                } else { // 'days' (default): same number of days, immediately before the range
+                    const rangeDays = Math.round((endD - startD) / 86400000) + 1;
+                    prevEnd = new Date(startD); prevEnd.setDate(prevEnd.getDate() - 1);
+                    prevStart = new Date(prevEnd); prevStart.setDate(prevStart.getDate() - (rangeDays - 1));
+                }
+                const toISO = (d) => d.toLocaleDateString('en-CA');
+                let prevFiltered = store.transactions.filter(t => t.date >= toISO(prevStart) && t.date <= toISO(prevEnd));
+                if (state.filterCats.size > 0) prevFiltered = prevFiltered.filter(t => state.filterCats.has(t.categoryId));
+                if (state.filterGroups.size > 0) prevFiltered = prevFiltered.filter(t => state.filterGroups.has(t.group));
+                const prevSum = prevFiltered.reduce((s, t) => s + t.total, 0);
+
+                const deltaEl = document.getElementById('rpt-delta');
+                if (sum === 0 && prevSum === 0) {
+                    deltaEl.textContent = "";
+                    deltaEl.className = "text-[10px] font-bold px-1.5 py-0.5 rounded-full";
+                } else if (prevSum === 0) {
+                    // No prior spending to compare against — a % would be misleading (technically infinite)
+                    deltaEl.textContent = I18n.t('new_period');
+                    deltaEl.className = "text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600";
+                } else {
+                    const pct = (sum - prevSum) / prevSum * 100;
+                    const up = pct >= 0; // spending went up = worse for an expense tracker
+                    deltaEl.textContent = (up ? "▲ " : "▼ ") + Math.abs(pct).toFixed(0) + "%";
+                    deltaEl.className = "text-[10px] font-bold px-1.5 py-0.5 rounded-full " + (up ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600");
+                }
+
                 const ctx = document.getElementById('chart-main').getContext('2d');
                 if (state.reportChart) state.reportChart.destroy();
 
                 let data = {};
+                let dimIsCategory = false; // whether the plotted dimension is "category" (true) or "group" (false)
+                let legendItemsAll = []; // every plotted dimension, INCLUDING hidden ones, so the legend can re-show them
 
                 // Common Options
                 let options = {
@@ -2617,11 +2762,7 @@
                     scales: {
                         y: {
                             ticks: {
-                                callback: function (value) {
-                                    if (Math.abs(value) >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
-                                    if (Math.abs(value) >= 1000) return '$' + (value / 1000).toFixed(0) + 'K';
-                                    return '$' + value;
-                                },
+                                callback: function (value) { return UI._fmtShort(value); },
                                 font: { size: 10, weight: 'bold' }
                             }
                         },
@@ -2635,6 +2776,7 @@
                 if (type === 'doughnut' || type === 'bar') {
                     const uniqueCats = [...new Set(filtered.map(t => t.category))];
                     const useGroups = uniqueCats.length === 1 || state.filterCats.size === 1;
+                    dimIsCategory = !useGroups;
 
                     const c = {};
                     filtered.forEach(t => {
@@ -2642,26 +2784,37 @@
                         c[k] = (c[k] || 0) + t.total
                     });
 
-                    // Sort descending
-                    const sortedKeys = Object.keys(c).sort((a, b) => c[b] - c[a]);
-                    const sortedValues = sortedKeys.map(k => c[k]);
+                    // Sort descending, resolve a color per key against the FULL list (so hiding
+                    // one doesn't shift everyone else's palette color), then drop hidden ones
+                    // from the chart data — but keep them in legendItemsAll so they can be re-shown.
+                    const allKeys = Object.keys(c).sort((a, b) => c[b] - c[a]);
+                    legendItemsAll = allKeys.map((k, i) => {
+                        const styleKey = UI._styleKeyFor(k, dimIsCategory);
+                        const style = store.chartStyles[styleKey];
+                        return { name: k, key: styleKey, color: (style && style.color) || UI._paletteColor(i) };
+                    });
 
-                    const bgColors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280', '#ec4899', '#14b8a6', '#6366f1', '#f43f5e', '#84cc16'];
+                    const sortedKeys = allKeys.filter(k => !state.hiddenSeries.has(UI._styleKeyFor(k, dimIsCategory)));
+                    const sortedValues = sortedKeys.map(k => c[k]);
+                    const bgColors = sortedKeys.map(k => legendItemsAll.find(it => it.name === k).color);
+
                     data = {
                         labels: sortedKeys,
                         datasets: [{
                             label: 'Total',
                             data: sortedValues,
-                            backgroundColor: bgColors.slice(0, sortedKeys.length).map((_, i) => bgColors[i % bgColors.length])
+                            backgroundColor: bgColors
                         }]
                     };
 
+                    state.lastChartData = {
+                        isTimeSeries: false,
+                        dimLabel: useGroups ? I18n.t('groups') : I18n.t('categories'),
+                        rows: sortedKeys.map((k, i) => ({ name: k, value: sortedValues[i] }))
+                    };
+
                     if (type === 'bar') {
-                        // Total Labels Plugin for Bar
-                        options.plugins.totalLabels = { id: 'totalLabels' }; // We'll implement inline plugin logic if needed, or rely on tooltip. 
-                        // Previous implementation had complex inline plugin. Let's keep it simple for now to save space, or restore it. 
-                        // Restoring the inline plugin for labels on top of bars:
-                        options.plugins = { ...options.plugins, legend: { display: false } }; // Re-ensure
+                        options.plugins = { ...options.plugins, legend: { display: false } };
                     }
                 }
                 // 2. Time Series (Stacked, Grouped, Multiline)
@@ -2684,19 +2837,43 @@
                         dimensions = uniqueCats.sort();
                         field = 'category';
                     }
+                    dimIsCategory = field === 'category';
 
-                    const datasets = dimensions.map((dim, i) => ({
-                        label: dim,
-                        data: keys.map(k => {
-                            return filtered.filter(t => t.date.startsWith(k) && (t[field] || "General") === dim).reduce((s, t) => s + t.total, 0)
-                        }),
-                        backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280', '#ec4899', '#14b8a6', '#6366f1'][i % 9],
-                        borderColor: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280', '#ec4899', '#14b8a6', '#6366f1'][i % 9],
-                        tension: 0.3,
-                        fill: type === 'stacked' // Area chart feel for stacked line? No, stacked bar is bar. Multiline is line.
-                    }));
+                    // Resolve color/dash/width against the FULL dimension list so hiding one
+                    // doesn't shift another's palette color, then drop hidden ones from the
+                    // chart data — but keep them in legendItemsAll so they can be re-shown.
+                    const isLine = type === 'multiline';
+                    legendItemsAll = dimensions.map((dim, i) => {
+                        const styleKey = UI._styleKeyFor(dim, dimIsCategory);
+                        const style = store.chartStyles[styleKey] || {};
+                        return { name: dim, key: styleKey, color: style.color || UI._paletteColor(i), style };
+                    });
+
+                    const visibleDims = dimensions.filter(dim => !state.hiddenSeries.has(UI._styleKeyFor(dim, dimIsCategory)));
+                    const datasets = visibleDims.map(dim => {
+                        const item = legendItemsAll.find(it => it.name === dim);
+                        return {
+                            label: dim,
+                            data: keys.map(k => {
+                                return filtered.filter(t => t.date.startsWith(k) && (t[field] || "General") === dim).reduce((s, t) => s + t.total, 0)
+                            }),
+                            backgroundColor: item.color,
+                            borderColor: item.color,
+                            borderWidth: isLine ? (item.style.width || 2) : 1,
+                            borderDash: isLine ? UI._dashArray(item.style.dash) : [],
+                            tension: 0.3,
+                            fill: false,
+                            _styleKey: item.key
+                        };
+                    });
 
                     data = { labels: keys, datasets: datasets };
+
+                    state.lastChartData = {
+                        isTimeSeries: true,
+                        months: keys,
+                        datasets: datasets.map(d => ({ name: d.label, values: d.data }))
+                    };
 
                     if (type === 'stacked') { options.scales.x.stacked = true; options.scales.y.stacked = true; }
                 }
@@ -2705,21 +2882,42 @@
                 const totalLabelsPlugin = {
                     id: 'totalLabels',
                     afterDatasetsDraw: (chart) => {
-                        if (chart.config.type !== 'bar' || type === 'stacked' || type === 'grouped') return; // Only simple bar
+                        if (chart.config.type !== 'bar') return;
                         const { ctx, scales: { x, y } } = chart;
                         ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
                         ctx.font = 'bold 10px "Segoe UI", sans-serif';
                         ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim() || '#4b5563';
-                        const ds = chart.data.datasets[0];
-                        if (!ds) return;
-                        ds.data.forEach((v, i) => {
-                            if (v > 0) {
-                                let label = v >= 1000000 ? '$' + (v / 1000000).toFixed(1) + 'M' : (v >= 1000 ? '$' + (v / 1000).toFixed(0) + 'K' : '$' + v);
-                                const xPos = x.getPixelForValue(chart.data.labels[i]);
-                                const yPos = y.getPixelForValue(v);
-                                ctx.fillText(label, xPos, yPos - 5);
-                            }
-                        });
+
+                        if (type === 'bar') {
+                            // Simple bar: one value per bar
+                            const ds = chart.data.datasets[0];
+                            if (ds) ds.data.forEach((v, i) => {
+                                if (v > 0) {
+                                    const xPos = x.getPixelForValue(chart.data.labels[i]);
+                                    const yPos = y.getPixelForValue(v);
+                                    ctx.fillText(UI._fmtShort(v), xPos, yPos - 5);
+                                }
+                            });
+                        } else if (type === 'grouped') {
+                            // One value per individual bar (item 3)
+                            chart.data.datasets.forEach((ds, dsi) => {
+                                const meta = chart.getDatasetMeta(dsi);
+                                ds.data.forEach((v, i) => {
+                                    if (v > 0 && meta.data[i]) ctx.fillText(UI._fmtShort(v), meta.data[i].x, meta.data[i].y - 5);
+                                });
+                            });
+                        } else if (type === 'stacked') {
+                            // A single total at the top of each stack, not per segment (item 3)
+                            chart.data.labels.forEach((label, i) => {
+                                let total = 0;
+                                chart.data.datasets.forEach(ds => { total += ds.data[i] || 0; });
+                                if (total > 0) {
+                                    const xPos = x.getPixelForValue(label);
+                                    const yPos = y.getPixelForValue(total);
+                                    ctx.fillText(UI._fmtShort(total), xPos, yPos - 5);
+                                }
+                            });
+                        }
                         ctx.restore();
                     }
                 };
@@ -2731,34 +2929,154 @@
                     plugins: [totalLabelsPlugin]
                 });
 
-                // Custom Legend Generation
+                // Custom Legend Generation — clickable to toggle visibility (item 4) and to
+                // open the color/style popover (item 2). Built with DOM methods rather than
+                // innerHTML since category/group names are user-entered text.
                 const leg = document.getElementById('chart-legend');
                 leg.innerHTML = "";
-                if (data.datasets) {
-                    // For Doughnut/Bar (Simple), labels are data.labels, colors are data.datasets[0].backgroundColor
-                    if (type === 'doughnut' || type === 'bar') {
-                        data.labels.forEach((l, i) => {
-                            let color = data.datasets[0].backgroundColor[i];
-                            // Abbreviate Label: First 4 chars if > 10 chars? 
-                            // User example: "Alim (Alimentos)". 
-                            // Let's just take first 4 letters.
-                            let short = l.length > 8 ? l.substring(0, 4) + '.' : l;
-                            leg.innerHTML += `<span style="color:${color}" class="text-[10px] font-bold cursor-pointer" title="${l}">${short}</span>`;
-                        });
-                    } else {
-                        // For Time Series, labels are dataset labels, colors are dataset backgroundColor/borderColor
-                        data.datasets.forEach(ds => {
-                            let l = ds.label;
-                            let color = ds.backgroundColor || ds.borderColor;
-                            if (typeof color === 'object') color = color[0]; // safety
-                            let short = l.length > 8 ? l.substring(0, 4) + '.' : l;
-                            leg.innerHTML += `<span style="color:${color}" class="text-[10px] font-bold cursor-pointer" title="${l}">${short}</span>`;
-                        });
-                    }
+                const isLineChart = type === 'multiline';
+                legendItemsAll.forEach(item => {
+                    const wrap = document.createElement('span');
+                    wrap.className = "inline-flex items-center gap-1";
+
+                    // A real button (not just a colored dot) so it reads as tappable on touch
+                    // screens — a plain 10px circle with only a `title` tooltip is invisible on
+                    // mobile, since title never shows on tap.
+                    const dotBtn = document.createElement('button');
+                    dotBtn.type = "button";
+                    dotBtn.className = "flex items-center justify-center";
+                    dotBtn.style.cssText = "width:26px;height:26px;padding:0;border:none;background:transparent;-webkit-tap-highlight-color:transparent;";
+                    dotBtn.setAttribute('aria-label', I18n.t('customize'));
+                    const swatch = document.createElement('span');
+                    swatch.style.cssText = "width:15px;height:15px;border-radius:5px;display:inline-block;background:" + item.color + ";box-shadow:0 0 0 2px var(--card-bg);border:1.5px solid rgba(0,0,0,.25);";
+                    dotBtn.appendChild(swatch);
+                    dotBtn.onclick = (e) => { e.stopPropagation(); UI.StyleEditor.open(item.key, item.name, item.color, isLineChart, dotBtn); };
+                    wrap.appendChild(dotBtn);
+
+                    const label = document.createElement('span');
+                    label.className = "text-[10px] font-bold cursor-pointer";
+                    label.style.color = item.color;
+                    if (state.hiddenSeries.has(item.key)) { label.style.opacity = "0.4"; label.style.textDecoration = "line-through"; }
+                    label.title = item.name;
+                    label.textContent = item.name.length > 8 ? item.name.substring(0, 4) + '.' : item.name;
+                    label.onclick = () => {
+                        if (state.hiddenSeries.has(item.key)) state.hiddenSeries.delete(item.key); else state.hiddenSeries.add(item.key);
+                        UI.updateReportChart();
+                    };
+                    wrap.appendChild(label);
+
+                    leg.appendChild(wrap);
+                });
+
+                document.getElementById('chart-legend-hint').classList.toggle('hidden-section', legendItemsAll.length === 0);
+
+                if (state.reportTableOn) UI.renderChartTable();
+            },
+
+            // ---- Style popover: color + line style + width per category/group (item 2) ----
+            StyleEditor: {
+                open: (key, name, currentColor, isLine, anchorEl) => {
+                    const pop = document.getElementById('style-popover');
+                    const style = store.chartStyles[key] || {};
+                    document.getElementById('style-popover-title').textContent = name;
+                    document.getElementById('style-color').value = style.color || currentColor;
+                    document.getElementById('style-dash').value = style.dash || 'solid';
+                    document.getElementById('style-width').value = style.width || 2;
+                    document.getElementById('style-line-only').classList.toggle('hidden-section', !isLine);
+                    pop.dataset.key = key;
+                    pop.classList.remove('hidden-section');
+
+                    const rect = anchorEl.getBoundingClientRect();
+                    let left = Math.min(rect.left, window.innerWidth - 202);
+                    let top = rect.bottom + 6;
+                    if (top + 180 > window.innerHeight) top = Math.max(6, rect.top - 186);
+                    pop.style.left = left + "px";
+                    pop.style.top = top + "px";
+
+                    const apply = () => {
+                        store.chartStyles[pop.dataset.key] = {
+                            color: document.getElementById('style-color').value,
+                            dash: document.getElementById('style-dash').value,
+                            width: +document.getElementById('style-width').value
+                        };
+                        App.save();
+                    };
+                    document.getElementById('style-color').oninput = apply;
+                    document.getElementById('style-dash').onchange = apply;
+                    document.getElementById('style-width').oninput = apply;
+                },
+                close: () => {
+                    document.getElementById('style-popover').classList.add('hidden-section');
+                },
+                reset: () => {
+                    const pop = document.getElementById('style-popover');
+                    delete store.chartStyles[pop.dataset.key];
+                    App.save();
+                    UI.StyleEditor.close();
                 }
+            },
+
+            // ---- Table view alongside the chart (item 6) ----
+            toggleChartTable: () => {
+                state.reportTableOn = !state.reportTableOn;
+                document.getElementById('chart-table-wrap').classList.toggle('hidden-section', !state.reportTableOn);
+                document.getElementById('btn-toggle-table').textContent = state.reportTableOn ? I18n.t('hide_table') : I18n.t('view_as_table');
+                if (state.reportTableOn) UI.renderChartTable();
+            },
+
+            renderChartTable: () => {
+                const table = document.getElementById('chart-table');
+                const d = state.lastChartData;
+                table.innerHTML = "";
+                if (!d) return;
+
+                const thead = document.createElement('thead');
+                const headRow = document.createElement('tr');
+                const tbody = document.createElement('tbody');
+
+                const addHeader = (text) => {
+                    const th = document.createElement('th');
+                    th.className = "text-left p-1 border-b theme-border font-bold theme-text-muted uppercase";
+                    th.textContent = text;
+                    headRow.appendChild(th);
+                };
+                const addCell = (row, text, right) => {
+                    const td = document.createElement('td');
+                    td.className = "p-1 border-b theme-border" + (right ? " text-right" : "");
+                    td.textContent = text;
+                    row.appendChild(td);
+                };
+
+                if (d.isTimeSeries) {
+                    addHeader(I18n.t('month'));
+                    d.datasets.forEach(ds => addHeader(ds.name));
+                    d.months.forEach((m, i) => {
+                        const tr = document.createElement('tr');
+                        addCell(tr, m, false);
+                        d.datasets.forEach(ds => addCell(tr, UI._fmtShort(ds.values[i]), true));
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    addHeader(d.dimLabel);
+                    addHeader(I18n.t('value'));
+                    d.rows.forEach(r => {
+                        const tr = document.createElement('tr');
+                        addCell(tr, r.name, false);
+                        addCell(tr, UI._fmtShort(r.value), true);
+                        tbody.appendChild(tr);
+                    });
+                }
+
+                thead.appendChild(headRow);
+                table.appendChild(thead);
+                table.appendChild(tbody);
             }
         };
         window.UI = UI;
+        document.addEventListener('click', (e) => {
+            const pop = document.getElementById('style-popover');
+            if (pop && !pop.classList.contains('hidden-section') && !pop.contains(e.target)) UI.StyleEditor.close();
+        });
 
         const BackupManager = {
             exportJSON: async (isAuto = false) => {
