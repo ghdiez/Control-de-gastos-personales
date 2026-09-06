@@ -1377,7 +1377,7 @@
                     showCancelButton: true,
                     cancelButtonText: I18n.t('cancel'),
                     buttonsStyling: false,
-                    customClass: { popup: 'rounded-2xl', confirmButton: 'w-[48%] rounded-xl mr-1 theme-bg-accent text-white font-bold py-3 shadow-lg', cancelButton: 'w-[48%] rounded-xl theme-text-secondary font-bold py-3 border theme-border hover:bg-gray-100' }
+                    customClass: { popup: 'rounded-2xl', confirmButton: 'flex-1 rounded-xl mr-1 theme-bg-accent text-white font-bold py-3 shadow-lg', cancelButton: 'flex-1 rounded-xl theme-text-secondary font-bold py-3 border theme-border hover:bg-gray-100' }
                 });
 
                 if (!realBalStr) return;
@@ -1486,8 +1486,8 @@
                     buttonsStyling: false,
                     customClass: {
                         popup: 'rounded-2xl',
-                        confirmButton: 'w-[48%] rounded-xl shadow-lg bg-red-600 text-white font-bold py-3 mr-1',
-                        cancelButton: 'w-[48%] rounded-xl border theme-border theme-text-accent font-bold py-3 hover:bg-gray-100'
+                        confirmButton: 'flex-1 rounded-xl shadow-lg bg-red-600 text-white font-bold py-3 mr-1',
+                        cancelButton: 'flex-1 rounded-xl border theme-border theme-text-accent font-bold py-3 hover:bg-gray-100'
                     }
                 }).then(async (r) => {
                     if (r.isConfirmed) {
@@ -1729,8 +1729,8 @@
                     customClass: { popup: 'rounded-2xl' },
                     html: `
                         <div class="flex justify-between gap-2 mt-4">
-                             <button onclick="swal.clickConfirm()" class="w-[48%] bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg hover:opacity-90 transition">${I18n.t('delete')}</button>
-                             <button onclick="swal.close()" class="w-[48%] theme-text-accent font-bold py-3 rounded-xl border theme-border hover:bg-gray-100 transition shadow-sm mx-auto block">${I18n.t('cancel')}</button>
+                             <button onclick="swal.clickConfirm()" class="flex-1 bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg hover:opacity-90 transition">${I18n.t('delete')}</button>
+                             <button onclick="swal.close()" class="flex-1 theme-text-accent font-bold py-3 rounded-xl border theme-border hover:bg-gray-100 transition shadow-sm">${I18n.t('cancel')}</button>
                         </div>
                     `
                 }).then(r => { if (r.isConfirmed) { store.transactions = store.transactions.filter(t => t.id !== id); App.save(); } });
@@ -1764,8 +1764,8 @@
                     customClass: { popup: 'rounded-2xl' },
                     html: `
                         <div class="flex justify-between gap-2 mt-4">
-                             <button onclick="swal.clickConfirm()" class="w-[48%] bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg hover:opacity-90 transition">${I18n.t('delete')}</button>
-                             <button onclick="swal.close()" class="w-[48%] theme-text-accent font-bold py-3 rounded-xl border theme-border hover:bg-gray-100 transition shadow-sm mx-auto block">${I18n.t('cancel')}</button>
+                             <button onclick="swal.clickConfirm()" class="flex-1 bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg hover:opacity-90 transition">${I18n.t('delete')}</button>
+                             <button onclick="swal.close()" class="flex-1 theme-text-accent font-bold py-3 rounded-xl border theme-border hover:bg-gray-100 transition shadow-sm">${I18n.t('cancel')}</button>
                         </div>
                     `
                 }).then((r) => {
@@ -1817,28 +1817,13 @@
                     focusConfirm: false, showCancelButton: true,
                     cancelButtonText: I18n.t('cancel'),
                     buttonsStyling: false,
-                    customClass: { popup: 'rounded-2xl', confirmButton: 'w-[48%] theme-bg-accent text-white font-bold py-3 rounded-xl shadow-lg mr-1', cancelButton: 'w-[48%] theme-text-accent font-bold py-3 rounded-xl border theme-border hover:bg-gray-100' },
+                    customClass: { popup: 'rounded-2xl', confirmButton: 'flex-1 theme-bg-accent text-white font-bold py-3 rounded-xl shadow-lg mr-1', cancelButton: 'flex-1 theme-text-accent font-bold py-3 rounded-xl border theme-border hover:bg-gray-100' },
 
                     preConfirm: () => [document.getElementById('sn').value, document.getElementById('st').value, document.getElementById('sc').value, document.getElementById('sd').value, document.getElementById('sf').value, document.getElementById('srv-grp').value]
                 });
 
                 if (v) {
                     const [n, t, c, d, f, g] = v; if (!n) return;
-                    // Use picked group if name is generic? No, name is name. Group is just for linking? 
-                    // Original code used "sn" (Name) as the group name too? 
-                    // Original: store.recurringServices.find(s => s.name === t.group);
-                    // The "Group" linking relies on Service Name matching a Category Group Name.
-                    // So if user selects a Group from the list, we probably want to set the Service Name TO that group name?
-                    // User complained "New Service" modal. 
-                    // I see I changed the HTML inputs. Original: <select id="sn" ...> for Group? 
-                    // Wait, original line 1501: `lbl_service_group ... <select id="sn" ...` 
-                    // It seems "Name" WAS the "Group Selector". 
-                    // But if I want a custom name? 
-                    // The app logic seems to be: Service Name === Category Group Name. This allows `linkHistory` to work.
-                    // So `sn` IS the group.
-                    // I added `label-std text-xs text-left` for better styling too.
-                    // And I added `cancelButtonText`.
-
                     const o = { id: eid || 's' + Date.now(), name: n, type: t, cost: parseFloat(c) || 0, cutoffDay: parseInt(d), frequency: f, alertDays: 3 };
                     if (eid) { const i = store.recurringServices.findIndex(x => x.id === eid); store.recurringServices[i] = o; } else store.recurringServices.push(o);
                     App.save(); UI.renderServicesConfig();
